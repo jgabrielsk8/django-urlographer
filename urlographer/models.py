@@ -91,15 +91,40 @@ class URLMapManager(models.Manager):
             cached = cache.get(cache_key)
             if cached:
                 return cached
+
+        # old cache url check
+        old_url = self.model(site=site, path=path)
+        old_url.old_set_hexdigest()
+        old_cache_key = old_url.cache_key()
+        if not force_cache_invalidation:
+            old_cached = cache.get(old_cache_key)
+            if old_cached:
+                return old_cached
+        # end old cache url check
+
         if path.endswith('/') and settings.URLOGRAPHER_INDEX_ALIAS:
             try:
                 url = self.get(hexdigest=url.hexdigest)
             except self.model.DoesNotExist:
-                url = self.cached_get(
-                    site, path + settings.URLOGRAPHER_INDEX_ALIAS,
-                    force_cache_invalidation=force_cache_invalidation)
+                try:
+                    url = self.cached_get(
+                        site, path + settings.URLOGRAPHER_INDEX_ALIAS,
+                        force_cache_invalidation=force_cache_invalidation)
+                except self.model.DoesNotExist:
+                    # old db url check
+                    try:
+                        url = self.get(hexdigest=old_url.hexdigest)
+                    except self.model.DoesNotExist:
+                        url = self.cached_get(
+                            site, path + settings.URLOGRAPHER_INDEX_ALIAS,
+                            force_cache_invalidation=force_cache_invalidation)
         else:
-            url = self.get(hexdigest=url.hexdigest)
+            try:
+                url = self.get(hexdigest=url.hexdigest)
+            except self.model.DoesNotExist:
+                # old db url check
+                url = self.get(hexdigest=old_url.hexdigest)
+
         # accessing foreignkeys caches instances with the object
         url.site
         url.content_map
@@ -167,6 +192,10 @@ class URLMap(models.Model):
 
     def set_hexdigest(self):
         """MD5 hash the site and path and save to the *hexdigest* field"""
+        self.hexdigest = md5(str(self.site.id) + self.path).hexdigest()
+
+    def old_set_hexdigest(self):
+        """MD5 hash the site and path and save to the *hexdigest* field"""
         self.hexdigest = md5(self.site.domain + self.path).hexdigest()
 
     def delete(self, *args, **options):
@@ -223,7 +252,7 @@ class URLMap(models.Model):
         self.redirect
         cache.set(self.cache_key(), self,
                   timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)
-        if self.path.endswith(settings.URLOGRAPHER_INDEX_ALIAS):
+        if self.path.endswith('/' + settings.URLOGRAPHER_INDEX_ALIAS):
             self._default_manager.cached_get(
                 self.site, self.path[:-len(settings.URLOGRAPHER_INDEX_ALIAS)],
                 force_cache_invalidation=True)

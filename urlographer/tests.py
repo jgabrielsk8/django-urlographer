@@ -66,7 +66,7 @@ class URLMapTest(TestCase):
     def setUp(self):
         self.site = Site.objects.get(id=1)
         self.url = models.URLMap(site=self.site, path='/test_path')
-        self.hexdigest = '389661d2e64f9d426ad306abe6e8f957'
+        self.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
         self.cache_key = settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
         self.mox = mox.Mox()
         self.mox.StubOutWithMock(models.URLMapManager, 'cached_get')
@@ -197,9 +197,9 @@ class URLMapTest(TestCase):
 
 class URLMapManagerTest(TestCase):
     def setUp(self):
-        self.site = Site(domain='example.com')
+        self.site = Site.objects.get(id=1)
         self.url = models.URLMap(site=self.site, path='/test_path')
-        self.hexdigest = '389661d2e64f9d426ad306abe6e8f957'
+        self.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
         self.cache_key = settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
         self.mox = mox.Mox()
 
@@ -222,6 +222,7 @@ class URLMapManagerTest(TestCase):
         self.mox.StubOutWithMock(models.cache, 'get')
         self.mox.StubOutWithMock(models.cache, 'set')
         models.cache.get(self.cache_key)
+        models.cache.get('urlographer:389661d2e64f9d426ad306abe6e8f957')
         models.cache.set(
             self.cache_key, self.url,
             timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)
@@ -233,6 +234,7 @@ class URLMapManagerTest(TestCase):
     def test_cached_get_does_not_exist(self):
         self.mox.StubOutWithMock(models.cache, 'get')
         models.cache.get(self.cache_key)
+        models.cache.get('urlographer:389661d2e64f9d426ad306abe6e8f957')
         self.mox.ReplayAll()
         self.assertRaises(
             models.URLMap.DoesNotExist, models.URLMap.objects.cached_get,
@@ -255,17 +257,50 @@ class URLMapManagerTest(TestCase):
         self.mox.VerifyAll()
         self.assertEqual(url, self.url)
 
-    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'])
+    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'],
+                       URLOGRAPHER_CACHE_PREFIX='urlographer')
     def test_cached_get_index_alias_cache_hit(self):
         index_urlmap = models.URLMap(site=self.site, path='/index.html',
-                                     status_code=204)
-        index_urlmap.set_hexdigest()
-        index_key = settings.URLOGRAPHER_CACHE_PREFIX + index_urlmap.hexdigest
-        root_key = (settings.URLOGRAPHER_CACHE_PREFIX +
-                    '617a9471507f0eb608f3858291adb70f')
+                                     status_code=204, hexdigest='index1234')
+        self.mox.StubOutWithMock(models.URLMap, 'set_hexdigest')
+        self.mox.StubOutWithMock(models.URLMap, 'cache_key')
+        self.mox.StubOutWithMock(models.URLMap, 'old_set_hexdigest')
         self.mox.StubOutWithMock(models.cache, 'get')
-        models.cache.get(root_key)
-        models.cache.get(index_key).AndReturn(index_urlmap)
+        models.URLMap.set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:root1234')
+        models.cache.get('urlographer:root1234')
+        models.URLMap.old_set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:old4321')
+        models.cache.get('urlographer:old4321')
+        models.URLMap.set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:index1234')
+        models.cache.get('urlographer:index1234').AndReturn(index_urlmap)
+        self.mox.ReplayAll()
+        urlmap = models.URLMap.objects.cached_get(self.site, '/')
+        self.mox.VerifyAll()
+        self.assertEqual(urlmap, index_urlmap)
+
+    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'],
+                       URLOGRAPHER_CACHE_PREFIX='urlographer')
+    def test_cached_get_index_alias_cache_hit_old_hex(self):
+        index_urlmap = models.URLMap(site=self.site, path='/index.html',
+                                     status_code=204, hexdigest='index1234')
+        self.mox.StubOutWithMock(models.URLMap, 'set_hexdigest')
+        self.mox.StubOutWithMock(models.URLMap, 'cache_key')
+        self.mox.StubOutWithMock(models.URLMap, 'old_set_hexdigest')
+        self.mox.StubOutWithMock(models.cache, 'get')
+        models.URLMap.set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:root1234')
+        models.cache.get('urlographer:root1234')
+        models.URLMap.old_set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:old4321')
+        models.cache.get('urlographer:old4321')
+        models.URLMap.set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:index1234')
+        models.cache.get('urlographer:index1234')
+        models.URLMap.old_set_hexdigest()
+        models.URLMap.cache_key().AndReturn('urlographer:oldindex4321')
+        models.cache.get('urlographer:oldindex4321').AndReturn(index_urlmap)
         self.mox.ReplayAll()
         urlmap = models.URLMap.objects.cached_get(self.site, '/')
         self.mox.VerifyAll()
