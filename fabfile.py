@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 APP_NAME = 'urlographer'
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'test_app.settings'
-os.environ['PYTHONPATH'] = os.pathsep.join([ROOT,])
+os.environ['PYTHONPATH'] = os.pathsep.join([ROOT, ])
 
 _local = functools.partial(_local, capture=False)
 
@@ -66,4 +66,3 @@ def migrate():
 def pypi_upload():
     """build and upload to PyPi"""
     _local('python setup.py sdist bdist_egg upload')
-
