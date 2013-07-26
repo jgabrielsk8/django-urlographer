@@ -25,9 +25,9 @@ def shell():
     _local('django-admin.py shell')
 
 
-def test():
+def test(args=''):
     """Run the test suite."""
-    _local('django-admin.py test')
+    _local('django-admin.py test %s' % args)
 
 
 def ipdb_test():
