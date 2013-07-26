@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='django-urlographer',
-    version='0.8.9',
+    version='0.9.0',
     author='Josh Mize',
     author_email='jmize@consumeraffairs.com',
     description='URL mapper for django',
@@ -30,7 +30,7 @@ setup(
     install_requires=['Django>=1.3', 'django-extensions>=0.9'],
     long_description='A URL mapper for the django web framework',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Framework :: Django',
         'Intended Audience :: Developers',
