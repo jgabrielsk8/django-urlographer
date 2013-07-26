@@ -15,7 +15,7 @@
 from django.conf import settings
 from django.contrib.sites.models import get_current_site, Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404, HttpResponse, HttpRequest
+from django.http import Http404, HttpRequest
 from django.test.client import RequestFactory
 from override_settings import override_settings
 from test_extensions import TestCase
@@ -477,7 +477,7 @@ class SitemapTest(TestCase):
             settings.URLOGRAPHER_CACHE_PREFIX, self.site)
         self.request = self.factory.get('/sitemap.xml')
         self.mock_contrib_sitemap_response = self.mox.CreateMockAnything()
-        self.mock_contrib_sitemap_response.content='<mock>Sitemap</mock>'
+        self.mock_contrib_sitemap_response.content = '<mock>Sitemap</mock>'
 
     def tearDown(self):
         self.mox.UnsetStubs()
