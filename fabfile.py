@@ -30,6 +30,10 @@ def test(args=''):
     _local('django-admin.py test %s' % args)
 
 
+def test_coverage():
+    _local('coverage run --source=%s --omit=*/migrations/*.py $(which django-admin.py) test' % APP_NAME)
+
+
 def ipdb_test():
     """
     Run the test suite with ipdbplugin enabled for errors and failures,
@@ -56,8 +60,3 @@ def schema():
 def migrate():
     """Update a testing database with south."""
     _local('django-admin.py migrate')
-
-
-def pypi_upload():
-    """build and upload to PyPi"""
-    _local('python setup.py sdist bdist_egg upload')
