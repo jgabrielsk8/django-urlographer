@@ -18,7 +18,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest
 from django.test.client import RequestFactory
 from override_settings import override_settings
-from test_extensions import TestCase
+from test_utilities import TestCase
 from urlographer import models, tasks, sample_views, utils, views
 import mox
 
