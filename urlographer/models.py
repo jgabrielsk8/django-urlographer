@@ -60,7 +60,7 @@ class ContentMap(models.Model):
         try:
             get_view(self.view)
         except:
-            raise ValidationError({'view': 'Please enter a valid view.'})
+            raise ValidationError({'view': ['Please enter a valid view.']})
 
     def save(self, *args, **options):
         """
