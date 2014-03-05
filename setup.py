@@ -28,11 +28,9 @@ setup(
     url='https://github.com/ConsumerAffairs/django-urlographer',
     packages=['urlographer', 'urlographer.migrations'],
     install_requires=[
-        'Django>=1.3',
+        'Django>=1.5',
         'django-extensions>=0.9',
         'celery>=3.0.11',
-        'django-override-settings>=1.2',
-        'django-test-utilities',
     ],
     long_description='A URL mapper for the django web framework',
     classifiers=[
