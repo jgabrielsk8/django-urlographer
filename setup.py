@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#import os
 from setuptools import setup
 
 
 setup(
     name='django-urlographer',
-    version='0.9.0',
+    version='0.9.1',
     author='Josh Mize',
     author_email='jmize@consumeraffairs.com',
     description='URL mapper for django',
