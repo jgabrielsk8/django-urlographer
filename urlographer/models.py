@@ -20,6 +20,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from django_extensions.db.fields.json import JSONField
+from django_extensions.db.models import TimeStampedModel
 
 from .utils import get_view
 
@@ -33,7 +34,7 @@ settings.URLOGRAPHER_INDEX_ALIAS = getattr(
     settings, 'URLOGRAPHER_INDEX_ALIAS', 'index.html')  # do NOT include /
 
 
-class ContentMap(models.Model):
+class ContentMap(TimeStampedModel):
     """
     A ContentMap is used by an :class:`~urlographer.models.URLMap` to refer
     to an arbitrary view.
@@ -110,7 +111,7 @@ class URLMapManager(models.Manager):
         return url
 
 
-class URLMap(models.Model):
+class URLMap(TimeStampedModel):
     """
     This model is used to map a URL to one of the following:
 
