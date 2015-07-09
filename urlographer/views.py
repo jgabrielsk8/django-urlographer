@@ -23,6 +23,11 @@ from django.http import (
     Http404, HttpResponse, HttpResponseNotFound, HttpResponsePermanentRedirect,
     HttpResponseRedirect)
 
+try:
+    import newrelic
+except:
+    newrelic = False
+
 from .models import URLMap
 from .utils import canonicalize_path, force_cache_invalidation, get_view
 
@@ -79,6 +84,14 @@ def route(request):
                 response = view.as_view(**initkwargs)(request, **options)
             else:
                 response = view(request, **options)
+
+            if newrelic:
+                view_name = "{}:{}.{}".format(view.__module__,
+                                              view.__name__,
+                                              request.method.lower())
+                newrelic.agent.set_transaction_name(
+                    view_name, "Python/Django/urlographer")
+
     elif url.status_code == 301:
         response = HttpResponsePermanentRedirect(unicode(url.redirect))
     elif url.status_code == 302:
@@ -102,6 +115,14 @@ def route(request):
             response = view.as_view()(request, response)
         else:
             response = view(request, response)
+
+        if newrelic:
+            view_name = "{}:{}.{}".format(view.__module__,
+                                          view.__name__,
+                                          request.method.lower())
+            newrelic.agent.set_transaction_name(
+                view_name, "Python/Django/urlographer")
+
     elif response.status_code == 404:
             raise Http404
 
