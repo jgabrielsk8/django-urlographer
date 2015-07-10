@@ -427,6 +427,74 @@ class RouteTest(TestCase):
             'URLOGRAPHER_HANDLERS values must be views or import strings',
             views.route, self.factory.get('/page'))
 
+    # Newrelic Tests
+    @override_settings(
+        URLOGRAPHER_HANDLERS={
+            402: sample_views.SampleClassHandler})
+    def test_handler_as_class_newrelic(self):
+        self.mox.StubOutWithMock(views, 'newrelic')
+        models.URLMap.objects.create(
+            site=self.site, path='/page', status_code=402)
+        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent.set_transaction_name(
+            'urlographer.sample_views:SampleClassHandler.get',
+            'Python/Django/urlographer')
+        self.mox.ReplayAll()
+        response = views.route(self.factory.get('/page'))
+        self.assertContains(response, 'payment required', status_code=402)
+
+    @override_settings(
+        URLOGRAPHER_HANDLERS={
+            206: sample_views.sample_handler})
+    def test_handler_as_func_newrelic(self):
+        self.mox.StubOutWithMock(views, 'newrelic')
+        models.URLMap.objects.create(
+            site=self.site, path='/page', status_code=206)
+        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent.set_transaction_name(
+            'urlographer.sample_views:sample_handler.get',
+            'Python/Django/urlographer')
+        self.mox.ReplayAll()
+        response = views.route(self.factory.get('/page'))
+        self.assertContains(response, 'modified content', status_code=206)
+
+    def test_content_map_class_based_view_newrelic(self):
+        self.mox.StubOutWithMock(views, 'newrelic')
+        content_map = models.ContentMap(
+            view='urlographer.sample_views.SampleClassView')
+        content_map.options['initkwargs'] = {
+            'test_val': 'testing 1 2 3'}
+        content_map.save()
+        models.URLMap.objects.create(
+            site=self.site, path='/test', content_map=content_map)
+        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent.set_transaction_name(
+            'urlographer.sample_views:SampleClassView.get',
+            'Python/Django/urlographer')
+        self.mox.ReplayAll()
+        response = views.route(self.factory.get('/test'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'test value=testing 1 2 3')
+
+    def test_content_map_view_function_newrelic(self):
+        self.mox.StubOutWithMock(views, 'newrelic')
+        content_map = models.ContentMap(
+            view='urlographer.sample_views.sample_view')
+        content_map.options['test_val'] = 'testing 1 2 3'
+        content_map.save()
+        urlmap = models.URLMap.objects.create(
+            site=self.site, path='/test', content_map=content_map)
+        request = self.factory.get('/test')
+        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent.set_transaction_name(
+            'urlographer.sample_views:sample_view.get',
+            'Python/Django/urlographer')
+        self.mox.ReplayAll()
+        response = views.route(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'test value=testing 1 2 3')
+        self.assertEqual(request.urlmap, urlmap)
+
 
 class CanonicalizePathTest(TestCase):
     def test_lower(self):
