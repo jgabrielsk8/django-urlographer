@@ -438,7 +438,7 @@ class RouteTest(TestCase):
         views.newrelic.agent = self.mox.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:SampleClassHandler.get',
-            'Python/Django/urlographer')
+            'Python/urlographer')
         self.mox.ReplayAll()
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'payment required', status_code=402)
@@ -453,7 +453,7 @@ class RouteTest(TestCase):
         views.newrelic.agent = self.mox.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:sample_handler.get',
-            'Python/Django/urlographer')
+            'Python/urlographer')
         self.mox.ReplayAll()
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'modified content', status_code=206)
@@ -470,7 +470,7 @@ class RouteTest(TestCase):
         views.newrelic.agent = self.mox.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:SampleClassView.get',
-            'Python/Django/urlographer')
+            'Python/urlographer')
         self.mox.ReplayAll()
         response = views.route(self.factory.get('/test'))
         self.assertEqual(response.status_code, 200)
@@ -488,7 +488,7 @@ class RouteTest(TestCase):
         views.newrelic.agent = self.mox.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:sample_view.get',
-            'Python/Django/urlographer')
+            'Python/urlographer')
         self.mox.ReplayAll()
         response = views.route(request)
         self.assertEqual(response.status_code, 200)
