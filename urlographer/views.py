@@ -79,18 +79,19 @@ def route(request):
         else:
             view = get_view(url.content_map.view)
             options = url.content_map.options
-            if hasattr(view, 'as_view'):
-                initkwargs = options.pop('initkwargs', {})
-                response = view.as_view(**initkwargs)(request, **options)
-            else:
-                response = view(request, **options)
-
+            
             if newrelic:
                 view_name = "{}:{}.{}".format(view.__module__,
                                               view.__name__,
                                               request.method.lower())
                 newrelic.agent.set_transaction_name(
-                    view_name, "Python/Django/urlographer")
+                    view_name, "Python/urlographer")            
+            
+            if hasattr(view, 'as_view'):
+                initkwargs = options.pop('initkwargs', {})
+                response = view.as_view(**initkwargs)(request, **options)
+            else:
+                response = view(request, **options)
 
     elif url.status_code == 301:
         response = HttpResponsePermanentRedirect(unicode(url.redirect))
@@ -111,17 +112,17 @@ def route(request):
             raise ImproperlyConfigured(
                 'URLOGRAPHER_HANDLERS values must be views or import strings')
 
-        if hasattr(view, 'as_view'):
-            response = view.as_view()(request, response)
-        else:
-            response = view(request, response)
-
         if newrelic:
             view_name = "{}:{}.{}".format(view.__module__,
                                           view.__name__,
                                           request.method.lower())
             newrelic.agent.set_transaction_name(
-                view_name, "Python/Django/urlographer")
+                view_name, "Python/urlographer")
+
+        if hasattr(view, 'as_view'):
+            response = view.as_view()(request, response)
+        else:
+            response = view(request, response)
 
     elif response.status_code == 404:
             raise Http404
