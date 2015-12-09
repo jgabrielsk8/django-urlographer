@@ -73,20 +73,22 @@ def route(request):
 
     request.urlmap = url
 
-    if url.status_code == 200:
+    if url.force_secure and not request.is_secure():
+        response = HttpResponseRedirect(unicode(url))
+    elif url.status_code == 200:
         if request.path != canonicalized:
             response = HttpResponsePermanentRedirect(unicode(url))
         else:
             view = get_view(url.content_map.view)
             options = url.content_map.options
-            
+
             if newrelic:
                 view_name = "{}:{}.{}".format(view.__module__,
                                               view.__name__,
                                               request.method.lower())
                 newrelic.agent.set_transaction_name(
-                    view_name, "Python/urlographer")            
-            
+                    view_name, "Python/urlographer")
+
             if hasattr(view, 'as_view'):
                 initkwargs = options.pop('initkwargs', {})
                 response = view.as_view(**initkwargs)(request, **options)
@@ -125,7 +127,7 @@ def route(request):
             response = view(request, response)
 
     elif response.status_code == 404:
-            raise Http404
+        raise Http404
 
     return response
 
