@@ -360,6 +360,88 @@ class RouteTest(TestCase):
         self.assertEqual(response.content, 'test value=testing 1 2 3')
         self.assertEqual(request.urlmap, urlmap)
 
+    def test_force_secure_wo_request_secure(self):
+        content_map = models.ContentMap(
+            view='urlographer.sample_views.sample_view')
+        content_map.options['test_val'] = 'testing 1 2 3'
+        content_map.save()
+        urlmap = models.URLMap.objects.create(
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=True)
+
+        request = self.factory.get('/test')
+        self.mox.StubOutWithMock(request, 'is_secure')
+        request.is_secure().AndReturn(False)
+
+        self.mox.ReplayAll()
+        response = views.route(request)
+        self.mox.VerifyAll()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], unicode(urlmap))
+        self.assertEqual(request.urlmap, urlmap)
+
+    def test_force_secure_w_request_secure(self):
+        content_map = models.ContentMap(
+            view='urlographer.sample_views.sample_view')
+        content_map.options['test_val'] = 'testing 1 2 3'
+        content_map.save()
+        urlmap = models.URLMap.objects.create(
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=True)
+
+        request = self.factory.get('/test')
+        self.mox.StubOutWithMock(request, 'is_secure')
+        request.is_secure().AndReturn(True)
+
+        self.mox.ReplayAll()
+        response = views.route(request)
+        self.mox.VerifyAll()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'test value=testing 1 2 3')
+        self.assertEqual(request.urlmap, urlmap)
+
+    def test_not_force_secure_w_request_secure(self):
+        content_map = models.ContentMap(
+            view='urlographer.sample_views.sample_view')
+        content_map.options['test_val'] = 'testing 1 2 3'
+        content_map.save()
+        urlmap = models.URLMap.objects.create(
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=False)
+
+        request = self.factory.get('/test')
+        self.mox.StubOutWithMock(request, 'is_secure')
+
+        self.mox.ReplayAll()
+        response = views.route(request)
+        self.mox.VerifyAll()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'test value=testing 1 2 3')
+        self.assertEqual(request.urlmap, urlmap)
+
+    def test_not_force_secure_wo_request_secure(self):
+        content_map = models.ContentMap(
+            view='urlographer.sample_views.sample_view')
+        content_map.options['test_val'] = 'testing 1 2 3'
+        content_map.save()
+        urlmap = models.URLMap.objects.create(
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=False)
+
+        request = self.factory.get('/test')
+        self.mox.StubOutWithMock(request, 'is_secure')
+
+        self.mox.ReplayAll()
+        response = views.route(request)
+        self.mox.VerifyAll()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'test value=testing 1 2 3')
+        self.assertEqual(request.urlmap, urlmap)
+
     def test_force_cache_invalidation(self):
         path = '/test'
         request = self.factory.get(path)
