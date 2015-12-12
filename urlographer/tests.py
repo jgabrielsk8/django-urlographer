@@ -633,11 +633,14 @@ class SitemapTest(TestCase):
         self.mox.UnsetStubs()
 
     def test_get_cache_miss(self):
+        qs = self.mox.CreateMockAnything()
+
         views.force_cache_invalidation(self.request)
         views.cache.get(self.cache_key)
         views.URLMap.objects.filter(
-            site=self.site, status_code=200, on_sitemap=True).AndReturn(
-                'mock queryset')
+            site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
+        qs.select_related('site').AndReturn('mock queryset')
+
         views.GenericSitemap({'queryset': 'mock queryset'}).AndReturn(
             'mock GenericSitemap')
         self.mock_contrib_sitemap_response.render()
@@ -664,10 +667,13 @@ class SitemapTest(TestCase):
             response.content, self.mock_contrib_sitemap_response.content)
 
     def test_get_force_cache_invalidation(self):
+        qs = self.mox.CreateMockAnything()
+
         views.force_cache_invalidation(self.request).AndReturn(True)
         views.URLMap.objects.filter(
-            site=self.site, status_code=200, on_sitemap=True).AndReturn(
-                'mock queryset')
+            site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
+        qs.select_related('site').AndReturn('mock queryset')
+
         views.GenericSitemap({'queryset': 'mock queryset'}).AndReturn(
             'mock GenericSitemap')
         views.contrib_sitemap(
@@ -684,9 +690,12 @@ class SitemapTest(TestCase):
             response.content, self.mock_contrib_sitemap_response.content)
 
     def test_get_invalidate_cache(self):
+        qs = self.mox.CreateMockAnything()
+
         views.URLMap.objects.filter(
-            site=self.site, status_code=200, on_sitemap=True).AndReturn(
-                'mock queryset')
+            site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
+        qs.select_related('site').AndReturn('mock queryset')
+
         views.GenericSitemap({'queryset': 'mock queryset'}).AndReturn(
             'mock GenericSitemap')
         views.contrib_sitemap(
