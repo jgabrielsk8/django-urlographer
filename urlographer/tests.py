@@ -612,6 +612,22 @@ class ForceCacheInvalidationTest(TestCase):
         self.assertTrue(utils.force_cache_invalidation(request))
 
 
+class CustomSitemapTest(TestCase):
+
+    def setUp(self):
+        self.sitemap = views.CustomSitemap({'queryset': []})
+
+    def test_attrs(self):
+        self.assertIsInstance(self.sitemap, views.GenericSitemap)
+
+    def test_location(self):
+        site = Site(domain='example.com')
+        url = models.URLMap(path='/some/path', site=site)
+
+        location = self.sitemap.location(url)
+        self.assertEqual(location, unicode(url))
+
+
 class SitemapTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -619,7 +635,7 @@ class SitemapTest(TestCase):
         self.mox.StubOutWithMock(views, 'force_cache_invalidation')
         self.mox.StubOutWithMock(views.URLMap.objects, 'filter')
         self.mox.StubOutWithMock(views, 'contrib_sitemap')
-        self.mox.StubOutWithMock(views, 'GenericSitemap')
+        self.mox.StubOutWithMock(views, 'CustomSitemap')
         self.mox.StubOutWithMock(views.cache, 'get')
         self.mox.StubOutWithMock(views.cache, 'set')
         self.site = Site.objects.get_current()
@@ -641,11 +657,11 @@ class SitemapTest(TestCase):
             site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
         qs.select_related('site').AndReturn('mock queryset')
 
-        views.GenericSitemap({'queryset': 'mock queryset'}).AndReturn(
-            'mock GenericSitemap')
+        views.CustomSitemap({'queryset': 'mock queryset'}).AndReturn(
+            'mock CustomSitemap')
         self.mock_contrib_sitemap_response.render()
         views.contrib_sitemap(
-            self.request, {'urlmap': 'mock GenericSitemap'}).AndReturn(
+            self.request, {'urlmap': 'mock CustomSitemap'}).AndReturn(
                 self.mock_contrib_sitemap_response)
         views.cache.set(
             self.cache_key, self.mock_contrib_sitemap_response.content,
@@ -674,10 +690,10 @@ class SitemapTest(TestCase):
             site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
         qs.select_related('site').AndReturn('mock queryset')
 
-        views.GenericSitemap({'queryset': 'mock queryset'}).AndReturn(
-            'mock GenericSitemap')
+        views.CustomSitemap({'queryset': 'mock queryset'}).AndReturn(
+            'mock CustomSitemap')
         views.contrib_sitemap(
-            self.request, {'urlmap': 'mock GenericSitemap'}).AndReturn(
+            self.request, {'urlmap': 'mock CustomSitemap'}).AndReturn(
                 self.mock_contrib_sitemap_response)
         self.mock_contrib_sitemap_response.render()
         views.cache.set(
@@ -696,10 +712,10 @@ class SitemapTest(TestCase):
             site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
         qs.select_related('site').AndReturn('mock queryset')
 
-        views.GenericSitemap({'queryset': 'mock queryset'}).AndReturn(
-            'mock GenericSitemap')
+        views.CustomSitemap({'queryset': 'mock queryset'}).AndReturn(
+            'mock CustomSitemap')
         views.contrib_sitemap(
-            self.request, {'urlmap': 'mock GenericSitemap'}).AndReturn(
+            self.request, {'urlmap': 'mock CustomSitemap'}).AndReturn(
                 self.mock_contrib_sitemap_response)
         self.mock_contrib_sitemap_response.render()
         views.cache.set(

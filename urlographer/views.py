@@ -132,6 +132,12 @@ def route(request):
     return response
 
 
+class CustomSitemap(GenericSitemap):
+
+    def location(self, obj):
+        return unicode(obj)
+
+
 def sitemap(request, invalidate_cache=False):
     """
     Constructs a `GenericSitemap <https://docs.djangoproject.com/en/dev/ref/\
@@ -155,7 +161,7 @@ def sitemap(request, invalidate_cache=False):
             return HttpResponse(content=cached)
     response = contrib_sitemap(
         request,
-        {'urlmap': GenericSitemap(
+        {'urlmap': CustomSitemap(
             {'queryset': URLMap.objects.filter(
                 site=site, status_code=200,
                 on_sitemap=True).select_related('site')})})
