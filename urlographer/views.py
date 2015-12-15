@@ -74,7 +74,7 @@ def route(request):
     request.urlmap = url
 
     if url.force_secure and not request.is_secure():
-        response = HttpResponseRedirect(unicode(url))
+        response = HttpResponsePermanentRedirect(unicode(url))
     elif url.status_code == 200:
         if request.path != canonicalized:
             response = HttpResponsePermanentRedirect(unicode(url))
@@ -132,6 +132,15 @@ def route(request):
     return response
 
 
+class CustomSitemap(GenericSitemap):
+
+    def get_urls(self, *args, **kwargs):
+        urls = super(CustomSitemap, self).get_urls(*args, **kwargs)
+        for url in urls:
+            url['location'] = unicode(url['item'])
+        return urls
+
+
 def sitemap(request, invalidate_cache=False):
     """
     Constructs a `GenericSitemap <https://docs.djangoproject.com/en/dev/ref/\
@@ -155,7 +164,7 @@ def sitemap(request, invalidate_cache=False):
             return HttpResponse(content=cached)
     response = contrib_sitemap(
         request,
-        {'urlmap': GenericSitemap(
+        {'urlmap': CustomSitemap(
             {'queryset': URLMap.objects.filter(
                 site=site, status_code=200,
                 on_sitemap=True).select_related('site')})})
