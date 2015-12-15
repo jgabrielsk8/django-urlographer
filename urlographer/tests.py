@@ -616,16 +616,42 @@ class CustomSitemapTest(TestCase):
 
     def setUp(self):
         self.sitemap = views.CustomSitemap({'queryset': []})
+        self.mock = mox.Mox()
+
+    def tearDown(self):
+        self.mock.UnsetStubs()
 
     def test_attrs(self):
         self.assertIsInstance(self.sitemap, views.GenericSitemap)
 
-    def test_location(self):
+    def test_get_urls(self):
         site = Site(domain='example.com')
-        url = models.URLMap(path='/some/path', site=site)
+        urlmap1 = models.URLMap(path='/some/path', site=site)
+        urlmap2 = models.URLMap(path='/some/path/2', site=site)
 
-        location = self.sitemap.location(url)
-        self.assertEqual(location, unicode(url))
+        urls = [{
+            'item': urlmap1,
+            'location': 'some loc',
+            'lastmod': None,
+            'changefreq': None,
+            'priority': None,
+        }, {
+            'item': urlmap2,
+            'location': 'some loc2',
+            'lastmod': None,
+            'changefreq': None,
+            'priority': None,
+        }]
+
+        self.mock.StubOutWithMock(views.GenericSitemap, 'get_urls')
+        views.GenericSitemap.get_urls().AndReturn(urls)
+
+        self.mock.ReplayAll()
+        urls = self.sitemap.get_urls()
+        self.mock.VerifyAll()
+
+        self.assertItemsEqual([unicode(urlmap1), unicode(urlmap2)],
+                              [u['location'] for u in urls])
 
 
 class SitemapTest(TestCase):

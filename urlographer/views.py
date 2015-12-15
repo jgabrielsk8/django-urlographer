@@ -134,8 +134,11 @@ def route(request):
 
 class CustomSitemap(GenericSitemap):
 
-    def location(self, obj):
-        return unicode(obj)
+    def get_urls(self, *args, **kwargs):
+        urls = super(CustomSitemap, self).get_urls(*args, **kwargs)
+        for url in urls:
+            url['location'] = unicode(url['item'])
+        return urls
 
 
 def sitemap(request, invalidate_cache=False):
