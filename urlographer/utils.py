@@ -36,7 +36,7 @@ def canonicalize_path(path):
     #. Eliminate ./
     #. Make ../ behave as expected by eliminating parent dirs from path
        (but without unintentionally exposing files, of course)
-    #. Elminate all unicode chars using :func:`force_ascii`
+    #. Eliminate all unicode chars using :func:`force_ascii`
     """
     while '//' in path:
         path = path.replace('//', '/')

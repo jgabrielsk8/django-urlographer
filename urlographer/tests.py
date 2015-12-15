@@ -377,7 +377,7 @@ class RouteTest(TestCase):
         response = views.route(request)
         self.mox.VerifyAll()
 
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 301)
         self.assertEqual(response['Location'], unicode(urlmap))
         self.assertEqual(request.urlmap, urlmap)
 

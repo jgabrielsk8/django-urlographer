@@ -74,7 +74,7 @@ def route(request):
     request.urlmap = url
 
     if url.force_secure and not request.is_secure():
-        response = HttpResponseRedirect(unicode(url))
+        response = HttpResponsePermanentRedirect(unicode(url))
     elif url.status_code == 200:
         if request.path != canonicalized:
             response = HttpResponsePermanentRedirect(unicode(url))
