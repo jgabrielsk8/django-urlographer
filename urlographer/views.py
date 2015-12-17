@@ -29,7 +29,12 @@ except:
     newrelic = False
 
 from .models import URLMap
-from .utils import canonicalize_path, force_cache_invalidation, get_view
+from .utils import (
+    canonicalize_path,
+    force_cache_invalidation,
+    get_redirect_url_with_query_string,
+    get_view,
+)
 
 settings.URLOGRAPHER_HANDLERS = getattr(settings, 'URLOGRAPHER_HANDLERS', {})
 
@@ -74,7 +79,8 @@ def route(request):
     request.urlmap = url
 
     if url.force_secure and not request.is_secure():
-        response = HttpResponsePermanentRedirect(unicode(url))
+        url_to = get_redirect_url_with_query_string(request, unicode(url))
+        response = HttpResponsePermanentRedirect(url_to)
     elif url.status_code == 200:
         if request.path != canonicalized:
             response = HttpResponsePermanentRedirect(unicode(url))

@@ -371,14 +371,18 @@ class RouteTest(TestCase):
 
         request = self.factory.get('/test')
         self.mox.StubOutWithMock(request, 'is_secure')
+        self.mox.StubOutWithMock(views, 'get_redirect_url_with_query_string')
+        # Calls
         request.is_secure().AndReturn(False)
+        views.get_redirect_url_with_query_string(
+            request, unicode(urlmap)).AndReturn(unicode(urlmap) + '?ok=true')
 
         self.mox.ReplayAll()
         response = views.route(request)
         self.mox.VerifyAll()
 
         self.assertEqual(response.status_code, 301)
-        self.assertEqual(response['Location'], unicode(urlmap))
+        self.assertEqual(response['Location'], unicode(urlmap) + '?ok=true')
         self.assertEqual(request.urlmap, urlmap)
 
     def test_force_secure_w_request_secure(self):
@@ -392,6 +396,8 @@ class RouteTest(TestCase):
 
         request = self.factory.get('/test')
         self.mox.StubOutWithMock(request, 'is_secure')
+        self.mox.StubOutWithMock(views, 'get_redirect_url_with_query_string')
+        # Calls
         request.is_secure().AndReturn(True)
 
         self.mox.ReplayAll()
@@ -413,6 +419,7 @@ class RouteTest(TestCase):
 
         request = self.factory.get('/test')
         self.mox.StubOutWithMock(request, 'is_secure')
+        self.mox.StubOutWithMock(views, 'get_redirect_url_with_query_string')
 
         self.mox.ReplayAll()
         response = views.route(request)
@@ -433,6 +440,7 @@ class RouteTest(TestCase):
 
         request = self.factory.get('/test')
         self.mox.StubOutWithMock(request, 'is_secure')
+        self.mox.StubOutWithMock(views, 'get_redirect_url_with_query_string')
 
         self.mox.ReplayAll()
         response = views.route(request)
@@ -576,6 +584,34 @@ class RouteTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
         self.assertEqual(request.urlmap, urlmap)
+
+
+class GetRedirectUrlWithQueryStringTest(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_missing_query_string(self):
+        request = self.factory.get('')
+        del request.META['QUERY_STRING']
+
+        url = 'http://example.com/test'
+        new_url = utils.get_redirect_url_with_query_string(request, url)
+        self.assertEqual(new_url, url)
+
+    def test_w_query_string(self):
+        request = self.factory.get('', data={'string': 'true', 'show': 'off'})
+
+        url = 'http://example.com/test'
+        new_url = utils.get_redirect_url_with_query_string(request, url)
+        self.assertEqual(new_url, '{}?{}'.format(url, 'string=true&show=off'))
+
+    def test_wo_query_string(self):
+        request = self.factory.get('')
+
+        url = 'http://example.com/test'
+        new_url = utils.get_redirect_url_with_query_string(request, url)
+        self.assertEqual(new_url, url)
 
 
 class CanonicalizePathTest(TestCase):
