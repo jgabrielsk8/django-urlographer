@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from django.conf import settings
 from django.contrib.sites.models import get_current_site, Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -600,7 +601,8 @@ class GetRedirectUrlWithQueryStringTest(TestCase):
         self.assertEqual(new_url, url)
 
     def test_w_query_string(self):
-        request = self.factory.get('', data={'string': 'true', 'show': 'off'})
+        data_dict = OrderedDict({'string': 'true', 'show': 'off'}.items())
+        request = self.factory.get('', data=data_dict)
 
         url = 'http://example.com/test'
         new_url = utils.get_redirect_url_with_query_string(request, url)
