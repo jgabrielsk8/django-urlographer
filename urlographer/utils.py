@@ -70,6 +70,13 @@ def get_view(lookup_view):
 get_view = memoize(get_view, _view_cache, 1)
 
 
+def get_redirect_url_with_query_string(request, url):
+    query_string = request.META.get('QUERY_STRING', '')
+    if query_string:
+        return '{}?{}'.format(url, query_string)
+    return url
+
+
 def force_cache_invalidation(request):
     '''
     Returns true if a request from contains the Cache-Control: no-cache header

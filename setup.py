@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='django-urlographer',
-    version='0.9.6',
+    version='0.9.7',
     author='Josh Mize',
     author_email='jmize@consumeraffairs.com',
     description='URL mapper for django',

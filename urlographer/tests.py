@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from django.conf import settings
 from django.contrib.sites.models import get_current_site, Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -68,11 +69,11 @@ class URLMapTest(TestCase):
         self.url = models.URLMap(site=self.site, path='/test_path')
         self.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
         self.cache_key = settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
-        self.mox = mox.Mox()
-        self.mox.StubOutWithMock(models.URLMapManager, 'cached_get')
+        self.mock = mox.Mox()
+        self.mock.StubOutWithMock(models.URLMapManager, 'cached_get')
 
     def tearDown(self):
-        self.mox.UnsetStubs()
+        self.mock.UnsetStubs()
 
     def test_protocol(self):
         self.assertEqual(self.url.protocol(), 'http')
@@ -108,13 +109,13 @@ class URLMapTest(TestCase):
         self.url.status_code = 204
         self.assertFalse(self.url.id)
         self.assertFalse(self.url.hexdigest)
-        self.mox.StubOutWithMock(models.cache, 'set')
+        self.mock.StubOutWithMock(models.cache, 'set')
         models.cache.set(
             self.cache_key, self.url,
             timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         self.url.save()
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(self.url.hexdigest, self.hexdigest)
         self.assertEqual(self.url.id, 1)
 
@@ -166,11 +167,11 @@ class URLMapTest(TestCase):
         self.url.site = self.site
         self.url.status_code = 204
         self.url.save()
-        self.mox.StubOutWithMock(models.cache, 'delete')
+        self.mock.StubOutWithMock(models.cache, 'delete')
         models.cache.delete(self.url.cache_key())
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         self.url.delete()
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertFalse(self.url.id)
 
     def test_unique_hexdigest(self):
@@ -190,9 +191,9 @@ class URLMapTest(TestCase):
             site=self.site, path='/test/index.html', status_code=204)
         models.URLMapManager.cached_get(
             self.site, '/test/', force_cache_invalidation=True)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         urlmap.save()
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
 
 
 class URLMapManagerTest(TestCase):
@@ -201,17 +202,17 @@ class URLMapManagerTest(TestCase):
         self.url = models.URLMap(site=self.site, path='/test_path')
         self.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
         self.cache_key = settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
-        self.mox = mox.Mox()
+        self.mock = mox.Mox()
 
     def tearDown(self):
-        self.mox.UnsetStubs()
+        self.mock.UnsetStubs()
 
     def test_cached_get_cache_hit(self):
-        self.mox.StubOutWithMock(models.cache, 'get')
+        self.mock.StubOutWithMock(models.cache, 'get')
         models.cache.get(self.cache_key).AndReturn(self.url)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         url = models.URLMap.objects.cached_get(self.site, self.url.path)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(url, self.url)
 
     def test_cached_get_cache_miss(self):
@@ -219,40 +220,40 @@ class URLMapManagerTest(TestCase):
         self.url.site = self.site
         self.url.status_code = 204
         self.url.save()
-        self.mox.StubOutWithMock(models.cache, 'get')
-        self.mox.StubOutWithMock(models.cache, 'set')
+        self.mock.StubOutWithMock(models.cache, 'get')
+        self.mock.StubOutWithMock(models.cache, 'set')
         models.cache.get(self.cache_key)
         models.cache.set(
             self.cache_key, self.url,
             timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         url = models.URLMap.objects.cached_get(self.site, self.url.path)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(url, self.url)
 
     def test_cached_get_does_not_exist(self):
-        self.mox.StubOutWithMock(models.cache, 'get')
+        self.mock.StubOutWithMock(models.cache, 'get')
         models.cache.get(self.cache_key)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         self.assertRaises(
             models.URLMap.DoesNotExist, models.URLMap.objects.cached_get,
             self.site, self.url.path)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
 
     def test_cached_get_force_cache_invalidation(self):
         self.site.save()
         self.url.site = self.site
         self.url.status_code = 204
         self.url.save()
-        self.mox.StubOutWithMock(models.cache, 'get')
-        self.mox.StubOutWithMock(models.cache, 'set')
+        self.mock.StubOutWithMock(models.cache, 'get')
+        self.mock.StubOutWithMock(models.cache, 'set')
         models.cache.set(
             self.cache_key, self.url,
             timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         url = models.URLMap.objects.cached_get(
             self.site, self.url.path, force_cache_invalidation=True)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(url, self.url)
 
     @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'],
@@ -260,18 +261,18 @@ class URLMapManagerTest(TestCase):
     def test_cached_get_index_alias_cache_hit(self):
         index_urlmap = models.URLMap(site=self.site, path='/index.html',
                                      status_code=204, hexdigest='index1234')
-        self.mox.StubOutWithMock(models.URLMap, 'set_hexdigest')
-        self.mox.StubOutWithMock(models.URLMap, 'cache_key')
-        self.mox.StubOutWithMock(models.cache, 'get')
+        self.mock.StubOutWithMock(models.URLMap, 'set_hexdigest')
+        self.mock.StubOutWithMock(models.URLMap, 'cache_key')
+        self.mock.StubOutWithMock(models.cache, 'get')
         models.URLMap.set_hexdigest()
         models.URLMap.cache_key().AndReturn('urlographer:root1234')
         models.cache.get('urlographer:root1234')
         models.URLMap.set_hexdigest()
         models.URLMap.cache_key().AndReturn('urlographer:index1234')
         models.cache.get('urlographer:index1234').AndReturn(index_urlmap)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         urlmap = models.URLMap.objects.cached_get(self.site, '/')
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(urlmap, index_urlmap)
 
 
@@ -279,10 +280,10 @@ class RouteTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.site = Site.objects.get()
-        self.mox = mox.Mox()
+        self.mock = mox.Mox()
 
     def tearDown(self):
-        self.mox.UnsetStubs()
+        self.mock.UnsetStubs()
 
     def test_route_not_found(self):
         request = self.factory.get('/404')
@@ -370,15 +371,19 @@ class RouteTest(TestCase):
             force_secure=True)
 
         request = self.factory.get('/test')
-        self.mox.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(views, 'get_redirect_url_with_query_string')
+        # Calls
         request.is_secure().AndReturn(False)
+        views.get_redirect_url_with_query_string(
+            request, unicode(urlmap)).AndReturn(unicode(urlmap) + '?ok=true')
 
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
 
         self.assertEqual(response.status_code, 301)
-        self.assertEqual(response['Location'], unicode(urlmap))
+        self.assertEqual(response['Location'], unicode(urlmap) + '?ok=true')
         self.assertEqual(request.urlmap, urlmap)
 
     def test_force_secure_w_request_secure(self):
@@ -391,12 +396,14 @@ class RouteTest(TestCase):
             force_secure=True)
 
         request = self.factory.get('/test')
-        self.mox.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(views, 'get_redirect_url_with_query_string')
+        # Calls
         request.is_secure().AndReturn(True)
 
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
@@ -412,11 +419,12 @@ class RouteTest(TestCase):
             force_secure=False)
 
         request = self.factory.get('/test')
-        self.mox.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(views, 'get_redirect_url_with_query_string')
 
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
@@ -432,11 +440,12 @@ class RouteTest(TestCase):
             force_secure=False)
 
         request = self.factory.get('/test')
-        self.mox.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(request, 'is_secure')
+        self.mock.StubOutWithMock(views, 'get_redirect_url_with_query_string')
 
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
@@ -447,13 +456,13 @@ class RouteTest(TestCase):
         request = self.factory.get(path)
         site = get_current_site(request)
         url_map = models.URLMap(site=site, path=path, status_code=204)
-        self.mox.StubOutWithMock(views, 'force_cache_invalidation')
-        self.mox.StubOutWithMock(models.URLMapManager, 'cached_get')
+        self.mock.StubOutWithMock(views, 'force_cache_invalidation')
+        self.mock.StubOutWithMock(models.URLMapManager, 'cached_get')
         views.force_cache_invalidation(request).AndReturn(True)
         models.URLMapManager.cached_get(
             site, path, force_cache_invalidation=True).AndReturn(
                 url_map)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(request)
         self.assertEqual(response.status_code, 204)
 
@@ -514,14 +523,14 @@ class RouteTest(TestCase):
         URLOGRAPHER_HANDLERS={
             402: sample_views.SampleClassHandler})
     def test_handler_as_class_newrelic(self):
-        self.mox.StubOutWithMock(views, 'newrelic')
+        self.mock.StubOutWithMock(views, 'newrelic')
         models.URLMap.objects.create(
             site=self.site, path='/page', status_code=402)
-        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:SampleClassHandler.get',
             'Python/urlographer')
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'payment required', status_code=402)
 
@@ -529,19 +538,19 @@ class RouteTest(TestCase):
         URLOGRAPHER_HANDLERS={
             206: sample_views.sample_handler})
     def test_handler_as_func_newrelic(self):
-        self.mox.StubOutWithMock(views, 'newrelic')
+        self.mock.StubOutWithMock(views, 'newrelic')
         models.URLMap.objects.create(
             site=self.site, path='/page', status_code=206)
-        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:sample_handler.get',
             'Python/urlographer')
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'modified content', status_code=206)
 
     def test_content_map_class_based_view_newrelic(self):
-        self.mox.StubOutWithMock(views, 'newrelic')
+        self.mock.StubOutWithMock(views, 'newrelic')
         content_map = models.ContentMap(
             view='urlographer.sample_views.SampleClassView')
         content_map.options['initkwargs'] = {
@@ -549,17 +558,17 @@ class RouteTest(TestCase):
         content_map.save()
         models.URLMap.objects.create(
             site=self.site, path='/test', content_map=content_map)
-        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:SampleClassView.get',
             'Python/urlographer')
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(self.factory.get('/test'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
 
     def test_content_map_view_function_newrelic(self):
-        self.mox.StubOutWithMock(views, 'newrelic')
+        self.mock.StubOutWithMock(views, 'newrelic')
         content_map = models.ContentMap(
             view='urlographer.sample_views.sample_view')
         content_map.options['test_val'] = 'testing 1 2 3'
@@ -567,15 +576,44 @@ class RouteTest(TestCase):
         urlmap = models.URLMap.objects.create(
             site=self.site, path='/test', content_map=content_map)
         request = self.factory.get('/test')
-        views.newrelic.agent = self.mox.CreateMockAnything()
+        views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:sample_view.get',
             'Python/urlographer')
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.route(request)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
         self.assertEqual(request.urlmap, urlmap)
+
+
+class GetRedirectUrlWithQueryStringTest(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_missing_query_string(self):
+        request = self.factory.get('')
+        del request.META['QUERY_STRING']
+
+        url = 'http://example.com/test'
+        new_url = utils.get_redirect_url_with_query_string(request, url)
+        self.assertEqual(new_url, url)
+
+    def test_w_query_string(self):
+        data_dict = OrderedDict({'string': 'true', 'show': 'off'}.items())
+        request = self.factory.get('', data=data_dict)
+
+        url = 'http://example.com/test'
+        new_url = utils.get_redirect_url_with_query_string(request, url)
+        self.assertEqual(new_url, '{}?{}'.format(url, 'string=true&show=off'))
+
+    def test_wo_query_string(self):
+        request = self.factory.get('')
+
+        url = 'http://example.com/test'
+        new_url = utils.get_redirect_url_with_query_string(request, url)
+        self.assertEqual(new_url, url)
 
 
 class CanonicalizePathTest(TestCase):
@@ -657,25 +695,25 @@ class CustomSitemapTest(TestCase):
 class SitemapTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        self.mox = mox.Mox()
-        self.mox.StubOutWithMock(views, 'force_cache_invalidation')
-        self.mox.StubOutWithMock(views.URLMap.objects, 'filter')
-        self.mox.StubOutWithMock(views, 'contrib_sitemap')
-        self.mox.StubOutWithMock(views, 'CustomSitemap')
-        self.mox.StubOutWithMock(views.cache, 'get')
-        self.mox.StubOutWithMock(views.cache, 'set')
+        self.mock = mox.Mox()
+        self.mock.StubOutWithMock(views, 'force_cache_invalidation')
+        self.mock.StubOutWithMock(views.URLMap.objects, 'filter')
+        self.mock.StubOutWithMock(views, 'contrib_sitemap')
+        self.mock.StubOutWithMock(views, 'CustomSitemap')
+        self.mock.StubOutWithMock(views.cache, 'get')
+        self.mock.StubOutWithMock(views.cache, 'set')
         self.site = Site.objects.get_current()
         self.cache_key = '%s%s_sitemap' % (
             settings.URLOGRAPHER_CACHE_PREFIX, self.site)
         self.request = self.factory.get('/sitemap.xml')
-        self.mock_contrib_sitemap_response = self.mox.CreateMockAnything()
+        self.mock_contrib_sitemap_response = self.mock.CreateMockAnything()
         self.mock_contrib_sitemap_response.content = '<mock>Sitemap</mock>'
 
     def tearDown(self):
-        self.mox.UnsetStubs()
+        self.mock.UnsetStubs()
 
     def test_get_cache_miss(self):
-        qs = self.mox.CreateMockAnything()
+        qs = self.mock.CreateMockAnything()
 
         views.force_cache_invalidation(self.request)
         views.cache.get(self.cache_key)
@@ -692,9 +730,9 @@ class SitemapTest(TestCase):
         views.cache.set(
             self.cache_key, self.mock_contrib_sitemap_response.content,
             settings.URLOGRAPHER_CACHE_TIMEOUT)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.sitemap(self.request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(
             response.content, self.mock_contrib_sitemap_response.content)
 
@@ -702,14 +740,14 @@ class SitemapTest(TestCase):
         views.force_cache_invalidation(self.request)
         views.cache.get(self.cache_key).AndReturn(
             self.mock_contrib_sitemap_response.content)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.sitemap(self.request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(
             response.content, self.mock_contrib_sitemap_response.content)
 
     def test_get_force_cache_invalidation(self):
-        qs = self.mox.CreateMockAnything()
+        qs = self.mock.CreateMockAnything()
 
         views.force_cache_invalidation(self.request).AndReturn(True)
         views.URLMap.objects.filter(
@@ -725,14 +763,14 @@ class SitemapTest(TestCase):
         views.cache.set(
             self.cache_key, self.mock_contrib_sitemap_response.content,
             settings.URLOGRAPHER_CACHE_TIMEOUT)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.sitemap(self.request)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(
             response.content, self.mock_contrib_sitemap_response.content)
 
     def test_get_invalidate_cache(self):
-        qs = self.mox.CreateMockAnything()
+        qs = self.mock.CreateMockAnything()
 
         views.URLMap.objects.filter(
             site=self.site, status_code=200, on_sitemap=True).AndReturn(qs)
@@ -747,23 +785,23 @@ class SitemapTest(TestCase):
         views.cache.set(
             self.cache_key, self.mock_contrib_sitemap_response.content,
             settings.URLOGRAPHER_CACHE_TIMEOUT)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         response = views.sitemap(self.request, invalidate_cache=True)
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
         self.assertEqual(
             response.content, self.mock_contrib_sitemap_response.content)
 
 
 class UpdateSitemapCacheTest(TestCase):
     def setUp(self):
-        self.mox = mox.Mox()
+        self.mock = mox.Mox()
 
     def tearDown(self):
-        self.mox.UnsetStubs()
+        self.mock.UnsetStubs()
 
     def test_update_sitemap_cache(self):
-        self.mox.StubOutWithMock(tasks, 'sitemap')
+        self.mock.StubOutWithMock(tasks, 'sitemap')
         tasks.sitemap(mox.IsA(HttpRequest), invalidate_cache=True)
-        self.mox.ReplayAll()
+        self.mock.ReplayAll()
         tasks.update_sitemap_cache()
-        self.mox.VerifyAll()
+        self.mock.VerifyAll()
