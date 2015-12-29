@@ -20,8 +20,8 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import resolve
 from django.http import (
-    Http404, HttpResponse, HttpResponseNotFound, HttpResponsePermanentRedirect,
-    HttpResponseRedirect)
+    Http404, HttpResponse, HttpResponseNotFound)
+from django.shortcuts import redirect
 
 try:
     import newrelic
@@ -66,7 +66,7 @@ def route(request):
         # the code below only works if route is mapped to .*
         with_slash = request.path_info + '/'
         if resolve(with_slash)[0] != route:
-            return HttpResponsePermanentRedirect(with_slash)
+            return redirect(with_slash, permanent=True)
     canonicalized = canonicalize_path(request.path)
     site = get_current_site(request)
     try:
@@ -80,10 +80,10 @@ def route(request):
 
     if url.force_secure and not request.is_secure():
         url_to = get_redirect_url_with_query_string(request, unicode(url))
-        response = HttpResponsePermanentRedirect(url_to)
+        response = redirect(url_to, permanent=True)
     elif url.status_code == 200:
         if request.path != canonicalized:
-            response = HttpResponsePermanentRedirect(unicode(url))
+            response = redirect(unicode(url), permanent=True)
         else:
             view = get_view(url.content_map.view)
             options = url.content_map.options
@@ -102,9 +102,9 @@ def route(request):
                 response = view(request, **options)
 
     elif url.status_code == 301:
-        response = HttpResponsePermanentRedirect(unicode(url.redirect))
+        response = redirect(unicode(url.redirect), permanent=True)
     elif url.status_code == 302:
-        response = HttpResponseRedirect(unicode(url.redirect))
+        response = redirect(unicode(url.redirect))
     elif url.status_code == 404:
         response = HttpResponseNotFound()
     else:
