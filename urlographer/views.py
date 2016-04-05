@@ -74,7 +74,8 @@ def route(request):
             site, canonicalized,
             force_cache_invalidation=force_cache_invalidation(request))
     except URLMap.DoesNotExist:
-        url = URLMap(site=site, path=canonicalized, status_code=404)
+        url = URLMap(site=site, path=canonicalized, status_code=404,
+                     force_secure=False)
 
     request.urlmap = url
 

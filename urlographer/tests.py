@@ -66,7 +66,8 @@ class ContentMapTest(TestCase):
 class URLMapTest(TestCase):
     def setUp(self):
         self.site = Site.objects.get(id=1)
-        self.url = models.URLMap(site=self.site, path='/test_path')
+        self.url = models.URLMap(site=self.site, path='/test_path',
+                                 force_secure=False)
         self.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
         self.cache_key = settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
         self.mock = mox.Mox()
@@ -199,7 +200,8 @@ class URLMapTest(TestCase):
 class URLMapManagerTest(TestCase):
     def setUp(self):
         self.site = Site.objects.get(id=1)
-        self.url = models.URLMap(site=self.site, path='/test_path')
+        self.url = models.URLMap(site=self.site, path='/test_path',
+                                 force_secure=False)
         self.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
         self.cache_key = settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
         self.mock = mox.Mox()
@@ -286,20 +288,20 @@ class RouteTest(TestCase):
         self.mock.UnsetStubs()
 
     def test_route_not_found(self):
-        request = self.factory.get('/404')
+        request = self.factory.get('/404', follow=True)
         self.assertEqual(request.path, '/404')
         self.assertRaises(Http404, views.route, request)
 
     def test_route_gone(self):
         models.URLMap.objects.create(
-            site=self.site, status_code=410, path='/410')
+            site=self.site, status_code=410, path='/410', force_secure=False)
         request = self.factory.get('/410')
         response = views.route(request)
         self.assertEqual(response.status_code, 410)
 
     def test_route_set_not_found(self):
         models.URLMap.objects.create(
-            site=self.site, status_code=404, path='/404')
+            site=self.site, status_code=404, path='/404', force_secure=False)
         request = self.factory.get('/404')
         self.assertRaises(Http404, views.route, request)
 
@@ -310,7 +312,8 @@ class RouteTest(TestCase):
             'template_name': 'admin/base.html'}
         content_map.save()
         models.URLMap.objects.create(site=self.site, path='/test',
-                                     content_map=content_map)
+                                     content_map=content_map,
+                                     force_secure=False)
         response = views.route(self.factory.get('/TEST'))
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response._headers['location'][1],
@@ -318,9 +321,11 @@ class RouteTest(TestCase):
 
     def test_permanent_redirect(self):
         target = models.URLMap.objects.create(
-            site=self.site, path='/target', status_code=204)
+            site=self.site, path='/target', status_code=204,
+            force_secure=False)
         models.URLMap.objects.create(
-            site=self.site, path='/source', redirect=target, status_code=301)
+            site=self.site, path='/source', redirect=target, status_code=301,
+            force_secure=False)
         response = views.route(self.factory.get('/source'))
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response._headers['location'][1],
@@ -328,9 +333,11 @@ class RouteTest(TestCase):
 
     def test_redirect(self):
         target = models.URLMap.objects.create(
-            site=self.site, path='/target', status_code=204)
+            site=self.site, path='/target', status_code=204,
+            force_secure=False)
         models.URLMap.objects.create(
-            site=self.site, path='/source', redirect=target, status_code=302)
+            site=self.site, path='/source', redirect=target, status_code=302,
+            force_secure=False)
         response = views.route(self.factory.get('/source'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response._headers['location'][1],
@@ -343,7 +350,8 @@ class RouteTest(TestCase):
             'test_val': 'testing 1 2 3'}
         content_map.save()
         models.URLMap.objects.create(
-            site=self.site, path='/test', content_map=content_map)
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=False)
         response = views.route(self.factory.get('/test'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'test value=testing 1 2 3')
@@ -354,7 +362,8 @@ class RouteTest(TestCase):
         content_map.options['test_val'] = 'testing 1 2 3'
         content_map.save()
         urlmap = models.URLMap.objects.create(
-            site=self.site, path='/test', content_map=content_map)
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=False)
         request = self.factory.get('/test')
         response = views.route(request)
         self.assertEqual(response.status_code, 200)
@@ -455,7 +464,8 @@ class RouteTest(TestCase):
         path = '/test'
         request = self.factory.get(path)
         site = get_current_site(request)
-        url_map = models.URLMap(site=site, path=path, status_code=204)
+        url_map = models.URLMap(site=site, path=path, status_code=204,
+                                force_secure=False)
         self.mock.StubOutWithMock(views, 'force_cache_invalidation')
         self.mock.StubOutWithMock(models.URLMapManager, 'cached_get')
         views.force_cache_invalidation(request).AndReturn(True)
@@ -485,7 +495,7 @@ class RouteTest(TestCase):
             403: 'urlographer.sample_views.sample_handler'})
     def test_handler_as_string(self):
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=403)
+            site=self.site, path='/page', status_code=403, force_secure=False)
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'modified content', status_code=403)
 
@@ -494,7 +504,7 @@ class RouteTest(TestCase):
             206: sample_views.sample_handler})
     def test_handler_as_func(self):
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=206)
+            site=self.site, path='/page', status_code=206, force_secure=False)
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'modified content', status_code=206)
 
@@ -503,7 +513,7 @@ class RouteTest(TestCase):
             402: sample_views.SampleClassHandler})
     def test_handler_as_class(self):
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=402)
+            site=self.site, path='/page', status_code=402, force_secure=False)
         response = views.route(self.factory.get('/page'))
         self.assertContains(response, 'payment required', status_code=402)
 
@@ -512,7 +522,7 @@ class RouteTest(TestCase):
             404: {'test': 'this'}})
     def test_handler_as_dict_fails(self):
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=404)
+            site=self.site, path='/page', status_code=404, force_secure=False)
         self.assertRaisesMessage(
             ImproperlyConfigured,
             'URLOGRAPHER_HANDLERS values must be views or import strings',
@@ -525,7 +535,7 @@ class RouteTest(TestCase):
     def test_handler_as_class_newrelic(self):
         self.mock.StubOutWithMock(views, 'newrelic')
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=402)
+            site=self.site, path='/page', status_code=402, force_secure=False)
         views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:SampleClassHandler.get',
@@ -540,7 +550,7 @@ class RouteTest(TestCase):
     def test_handler_as_func_newrelic(self):
         self.mock.StubOutWithMock(views, 'newrelic')
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=206)
+            site=self.site, path='/page', status_code=206, force_secure=False)
         views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:sample_handler.get',
@@ -557,7 +567,8 @@ class RouteTest(TestCase):
             'test_val': 'testing 1 2 3'}
         content_map.save()
         models.URLMap.objects.create(
-            site=self.site, path='/test', content_map=content_map)
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=False)
         views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
             'urlographer.sample_views:SampleClassView.get',
@@ -574,7 +585,8 @@ class RouteTest(TestCase):
         content_map.options['test_val'] = 'testing 1 2 3'
         content_map.save()
         urlmap = models.URLMap.objects.create(
-            site=self.site, path='/test', content_map=content_map)
+            site=self.site, path='/test', content_map=content_map,
+            force_secure=False)
         request = self.factory.get('/test')
         views.newrelic.agent = self.mock.CreateMockAnything()
         views.newrelic.agent.set_transaction_name(
