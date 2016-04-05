@@ -130,7 +130,7 @@ class URLMap(TimeStampedModel):
     """
     site = models.ForeignKey(Site)
     path = models.CharField(max_length=2000)
-    force_secure = models.BooleanField(default=False)
+    force_secure = models.BooleanField(default=True)
     hexdigest = models.CharField(max_length=255, db_index=True, blank=True,
                                  unique=True)
     status_code = models.IntegerField(default=200, db_index=True)
