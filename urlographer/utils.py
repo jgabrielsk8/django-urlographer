@@ -13,9 +13,24 @@
 # limitations under the License.
 
 from django.core.urlresolvers import get_mod_func
-from django.utils.importlib import import_module
-from django.utils.functional import memoize
 
+try:
+    # Django versions >= 1.9
+    from django.utils.lru_cache import lru_cache
+
+    def memoize(function, *args):
+        return lru_cache()(function)
+
+except ImportError:
+    # Django versions < 1.9
+    from django.utils.functional import memoize
+
+try:
+    # Django versions >= 1.9
+    from django.utils.module_loading import import_module
+except ImportError:
+    # Django versions < 1.9
+    from django.utils.importlib import import_module
 
 _view_cache = {}
 

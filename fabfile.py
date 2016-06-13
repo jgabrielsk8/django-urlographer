@@ -51,6 +51,9 @@ def syncdb():
     """Create a database for testing in the shell or server."""
     _local('django-admin.py syncdb')
 
+def makemigrations():
+    """Create a database for testing in the shell or server."""
+    _local('django-admin.py makemigrations urlographer')
 
 def schema():
     """Create a schema migration for any changes."""

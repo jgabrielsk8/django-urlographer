@@ -15,13 +15,20 @@
 from django.conf import settings
 from django.contrib.sitemaps.views import sitemap as contrib_sitemap
 from django.contrib.sitemaps import GenericSitemap
-from django.contrib.sites.models import get_current_site
+
+
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import resolve
 from django.http import (
     Http404, HttpResponse, HttpResponseNotFound, HttpResponsePermanentRedirect,
     HttpResponseRedirect)
+
+try:
+    # Django => 1.9
+    from django.contrib.sites.shortcuts import get_current_site
+except ImportError:
+    from django.contrib.sites.models import get_current_site
 
 try:
     import newrelic
