@@ -14,14 +14,21 @@
 
 from collections import OrderedDict
 from django.conf import settings
-from django.contrib.sites.models import get_current_site, Site
+from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
-from test_utilities import TestCase
+# from test_utilities import TestCase
+from django.test import TestCase
 from urlographer import models, tasks, sample_views, utils, views
 import mox
+
+try:
+    # Django => 1.9
+    from django.contrib.sites.shortcuts import get_current_site
+except ImportError:
+    from django.contrib.sites.models import get_current_site
 
 
 class ContentMapTest(TestCase):
@@ -613,7 +620,8 @@ class GetRedirectUrlWithQueryStringTest(TestCase):
         self.assertEqual(new_url, url)
 
     def test_w_query_string(self):
-        data_dict = OrderedDict({'string': 'true', 'show': 'off'}.items())
+        data_dict = OrderedDict(sorted(
+            {'string': 'true', 'show': 'off'}.items(), reverse=True))
         request = self.factory.get('', data=data_dict)
 
         url = 'http://example.com/test'
