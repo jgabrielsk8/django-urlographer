@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 setup(
@@ -25,7 +25,7 @@ setup(
     description='URL mapper for django',
     license='Apache License 2.0',
     url='https://github.com/ConsumerAffairs/django-urlographer',
-    packages=['urlographer', 'urlographer.migrations'],
+    packages=find_packages(exclude=('tests*',)),
     install_requires=[
         'Django>=1.5',
         'django-extensions>=0.9',
