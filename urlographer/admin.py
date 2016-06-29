@@ -41,6 +41,7 @@ class URLMapAdminForm(forms.ModelForm):
 
     class Meta:
         model = URLMap
+        exclude = ()
 
 
 class URLMapAdmin(admin.ModelAdmin):
