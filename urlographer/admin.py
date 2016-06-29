@@ -32,7 +32,7 @@ class HasRedirectsToItListFilter(admin.SimpleListFilter):
 
 class SiteModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return "{0}".format(obj.name)
+        return "{0} - {1}".format(obj.name, obj.domain)
 
 
 class URLMapAdminForm(forms.ModelForm):
