@@ -1,4 +1,7 @@
+# coding: utf-8
+from django import forms
 from django.contrib import admin
+from django.contrib.sites.models import Site
 from urlographer.models import URLMap, ContentMap
 
 
@@ -27,7 +30,21 @@ class HasRedirectsToItListFilter(admin.SimpleListFilter):
             return queryset.extra(where=["(%s)=0" % join_sql])
 
 
+class SiteModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return "{0}".format(obj.name)
+
+
+class URLMapAdminForm(forms.ModelForm):
+
+    site = SiteModelChoiceField(queryset=Site.objects.all())
+
+    class Meta:
+        model = URLMap
+
+
 class URLMapAdmin(admin.ModelAdmin):
+    form = URLMapAdminForm
 
     def queryset(self, request):
         # Rename to `get_queryset` in Django version > 1.5
