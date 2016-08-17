@@ -2,7 +2,6 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.sites.models import Site
-from django.db.models.expressions import RawSQL
 
 from urlographer.models import URLMap, ContentMap
 
@@ -50,9 +49,16 @@ class URLMapAdmin(admin.ModelAdmin):
     form = URLMapAdminForm
 
     def get_queryset(self, request):
-        return super(URLMapAdmin, self).get_queryset(
-            request
-        ).annotate(redirects_count=RawSQL(SQL_COUNT_REDIRECTS, ()))
+        try:
+            from django.db.models.expressions import RawSQL
+            return super(URLMapAdmin, self).get_queryset(
+                request
+            ).annotate(redirects_count=RawSQL(SQL_COUNT_REDIRECTS, ()))
+        except ImportError:
+            # Django version <= 1.7
+            return super(URLMapAdmin, self).queryset(request).extra(select={
+                'redirects_count': SQL_COUNT_REDIRECTS
+            })
 
     def redirects_count(self, obj):
         return obj.redirects_count
