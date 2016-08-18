@@ -51,3 +51,11 @@ Run this command:
 ```
 tox -e django16 -- -s
 ```
+
+
+To install in current virtualenv
+--
+Make sure your virtualenv is loaded and:
+```
+python setup.py install
+```
