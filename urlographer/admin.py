@@ -25,9 +25,10 @@ class HasRedirectsToItListFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         join_sql = SQL_COUNT_REDIRECTS
-        if self.value() == 'yes':
+        value = self.value()
+        if value == 'yes':
             return queryset.extra(where=["(%s)>0" % join_sql])
-        if self.value() == 'no':
+        if value == 'no':
             return queryset.extra(where=["(%s)=0" % join_sql])
 
 
