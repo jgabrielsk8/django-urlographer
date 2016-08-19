@@ -7,7 +7,8 @@ A URL mapper for the django web framework.
 [![Coverage Status](https://coveralls.io/repos/ConsumerAffairs/django-urlographer/badge.png)](https://coveralls.io/r/ConsumerAffairs/django-urlographer)
 
 
-Features:
+Features
+--
 
 * supplements the django url resolution
 * database + cache driven
@@ -19,3 +20,42 @@ Features:
     * ascii
     * eliminate relative paths
     * extra slashes
+
+
+To run tests locally
+--
+
+```
+tox
+```
+
+To run tests for a specific environment:
+```
+tox -e django16
+```
+
+
+To debug tests locally
+--
+
+* Add `ipdb` to `deps` in `[base]`, example:
+
+```[base]
+deps =
+    mox
+    nose
+    ipdb
+```
+
+Run this command:
+```
+tox -e django16 -- -s
+```
+
+
+To install in current virtualenv
+--
+Make sure your virtualenv is loaded and:
+```
+python setup.py install
+```

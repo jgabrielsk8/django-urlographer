@@ -4,6 +4,7 @@
 *.pot
 *.pyc
 *.db
+.tox/*
 local_settings.py
 build
 dist

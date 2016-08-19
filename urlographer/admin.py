@@ -2,6 +2,7 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.sites.models import Site
+
 from urlographer.models import URLMap, ContentMap
 
 
@@ -24,9 +25,10 @@ class HasRedirectsToItListFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         join_sql = SQL_COUNT_REDIRECTS
-        if self.value() == 'yes':
+        value = self.value()
+        if value == 'yes':
             return queryset.extra(where=["(%s)>0" % join_sql])
-        if self.value() == 'no':
+        if value == 'no':
             return queryset.extra(where=["(%s)=0" % join_sql])
 
 
@@ -47,11 +49,17 @@ class URLMapAdminForm(forms.ModelForm):
 class URLMapAdmin(admin.ModelAdmin):
     form = URLMapAdminForm
 
-    def queryset(self, request):
-        # Rename to `get_queryset` in Django version > 1.5
-        return super(URLMapAdmin, self).queryset(request).extra(select={
-            'redirects_count': SQL_COUNT_REDIRECTS
-        })
+    def get_queryset(self, request):
+        try:
+            from django.db.models.expressions import RawSQL
+            return super(URLMapAdmin, self).get_queryset(
+                request
+            ).annotate(redirects_count=RawSQL(SQL_COUNT_REDIRECTS, ()))
+        except ImportError:
+            # Django version <= 1.7
+            return super(URLMapAdmin, self).queryset(request).extra(select={
+                'redirects_count': SQL_COUNT_REDIRECTS
+            })
 
     def redirects_count(self, obj):
         return obj.redirects_count

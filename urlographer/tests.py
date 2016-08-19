@@ -19,10 +19,18 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
-# from test_utilities import TestCase
-from django.test import TestCase
-from urlographer import models, tasks, sample_views, utils, views
+
 import mox
+
+from django.test import TestCase
+
+from urlographer import (
+    admin,
+    models,
+    sample_views,
+    tasks,
+    utils,
+    views)
 
 try:
     # Django => 1.9
@@ -825,3 +833,98 @@ class UpdateSitemapCacheTest(TestCase):
         self.mock.ReplayAll()
         tasks.update_sitemap_cache()
         self.mock.VerifyAll()
+
+
+class HasRedirectsToItListFilterTest(TestCase):
+    def setUp(self):
+        self.request = RequestFactory().get('')
+        self.filter = admin.HasRedirectsToItListFilter(
+            self.request, {}, models.URLMap, admin.URLMapAdmin)
+        self.mock = mox.Mox()
+
+    def tearDown(self):
+        self.mock.UnsetStubs()
+
+    def test_lookups(self):
+        self.assertEqual(
+            self.filter.lookups(self.request, admin.URLMapAdmin),
+            (
+                ('yes', 'Yes'),
+                ('no', 'No'),
+            )
+        )
+
+    def test_queryset_value_yes(self):
+        queryset = self.mock.CreateMockAnything()
+
+        self.mock.StubOutWithMock(self.filter, 'value')
+        self.mock.StubOutWithMock(queryset, 'extra')
+
+        # Expected calls:
+        self.filter.value().AndReturn('yes')
+        queryset.extra(
+            where=["(%s)>0" % admin.SQL_COUNT_REDIRECTS]).AndReturn('qs')
+
+        self.mock.ReplayAll()
+        self.assertEqual(self.filter.queryset(self.request, queryset), 'qs')
+        self.mock.VerifyAll()
+
+    def test_queryset_value_no(self):
+        queryset = self.mock.CreateMockAnything()
+
+        self.mock.StubOutWithMock(self.filter, 'value')
+        self.mock.StubOutWithMock(queryset, 'extra')
+
+        # Expected calls:
+        self.filter.value().AndReturn('no')
+        queryset.extra(
+            where=["(%s)=0" % admin.SQL_COUNT_REDIRECTS]).AndReturn('qs')
+
+        self.mock.ReplayAll()
+        self.assertEqual(self.filter.queryset(self.request, queryset), 'qs')
+        self.mock.VerifyAll()
+
+    def test_queryset_value_none_of_the_above(self):
+        queryset = self.mock.CreateMockAnything()
+
+        self.mock.StubOutWithMock(self.filter, 'value')
+        self.mock.StubOutWithMock(queryset, 'extra')
+
+        # Expected calls:
+        self.filter.value().AndReturn(None)
+
+        self.mock.ReplayAll()
+        self.assertEqual(self.filter.queryset(self.request, queryset), None)
+        self.mock.VerifyAll()
+
+
+class URLMapAdminTest(TestCase):
+    def setUp(self):
+        content_map = models.ContentMap.objects.create(
+            view='urlographer.views.route')
+        self.urlmap = models.URLMap.objects.create(
+            site=Site.objects.get(id=1), path='/test_path',
+            content_map=content_map)
+        self.admin_instance = admin.URLMapAdmin(models.URLMap, None)
+        self.request = RequestFactory().get('')
+
+    def test_get_queryset_without_redirects(self):
+        # tox will currently call versions both below and above 1.7
+        urlmap = self.admin_instance.get_queryset(self.request)[0]
+        self.assertEqual(urlmap.redirects_count, 0)
+
+    def test_get_queryset_with_redirects(self):
+        models.URLMap.objects.create(
+            site=Site.objects.get(id=1), path='/another_test_path',
+            status_code=301, redirect=self.urlmap)
+        for urlmap in [
+            um for um in self.admin_instance.get_queryset(
+                self.request
+            ) if um.id == self.urlmap.id
+        ]:
+            self.assertEqual(urlmap.redirects_count, 1)
+
+    def test_redirects_count(self):
+        urlmap = self.admin_instance.get_queryset(self.request)[0]
+        self.assertEqual(
+            self.admin_instance.redirects_count(urlmap), 0)
