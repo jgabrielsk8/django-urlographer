@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import mox
+
 from collections import OrderedDict
+
+from model_mommy import mommy, recipe
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -20,7 +26,6 @@ from django.http import Http404, HttpRequest
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 
-import mox
 
 from django.test import TestCase
 
@@ -833,6 +838,59 @@ class UpdateSitemapCacheTest(TestCase):
         self.mock.ReplayAll()
         tasks.update_sitemap_cache()
         self.mock.VerifyAll()
+
+
+class FixRedirectLoopsTaskTest(TestCase):
+
+    def setUp(self):
+        """Set up these URLs:
+
+        A
+        B
+        C -> A
+        D -> C -> A
+        E -> D -> C -> A
+        """
+        site = mommy.make('sites.Site', domain='www.ca.com')
+        urlmap_recipe = recipe.Recipe(
+            'urlographer.URLMap', site=site)
+
+        self.urlA = urlmap_recipe.make(
+            path='/a/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        self.urlB = urlmap_recipe.make(
+            path='/b/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        self.urlC = urlmap_recipe.make(
+            path='/c/', redirect=self.urlA, status_code=301)
+        self.urlD = urlmap_recipe.make(
+            path='/d/', redirect=self.urlC, status_code=301)
+        self.urlE = urlmap_recipe.make(
+            path='/e/', redirect=self.urlD, status_code=302)
+
+        self.task = tasks.FixRedirectLoopsTask()
+        self.mock = mox.Mox()
+
+    def tearDown(self):
+        self.mock.UnsetStubs()
+
+    def test_get_urlmaps_2_hops(self):
+        result = self.task.get_urlmaps_2_hops()
+        self.assertQuerysetEqual(result, [repr(self.urlD), ])
+
+    def test_run(self):
+        self.assertEqual(self.urlD.redirect, self.urlC)
+        self.mock.StubOutWithMock(self.task, 'get_urlmaps_2_hops')
+
+        # Expected calls:
+        self.task.get_urlmaps_2_hops().AndReturn([self.urlD])
+
+        self.mock.ReplayAll()
+        self.task.run()
+        self.mock.VerifyAll()
+
+        updated_url_d = models.URLMap.objects.get(pk=self.urlD.pk)
+        self.assertEqual(updated_url_d.redirect, self.urlA)
 
 
 class HasRedirectsToItListFilterTest(TestCase):
