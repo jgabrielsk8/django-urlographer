@@ -38,7 +38,7 @@ class FixRedirectLoopsTask(Task):
     def get_urlmaps_2_hops(self):
         qs_filters = {
             'redirect__status_code__range': (300, 399),
-            'redirect__redirect__status_code': 200}
+            'redirect__redirect__status_code__in': (200, 410)}
         return URLMap.objects.filter(**qs_filters)
 
     def run(self):
