@@ -825,7 +825,7 @@ class SitemapTest(TestCase):
             response.content, self.mock_contrib_sitemap_response.content)
 
 
-class UpdateSitemapCacheTest(TestCase):
+class UpdateSitemapCacheTaskTest(TestCase):
     def setUp(self):
         self.mock = mox.Mox()
 
@@ -836,7 +836,7 @@ class UpdateSitemapCacheTest(TestCase):
         self.mock.StubOutWithMock(tasks, 'sitemap')
         tasks.sitemap(mox.IsA(HttpRequest), invalidate_cache=True)
         self.mock.ReplayAll()
-        tasks.update_sitemap_cache()
+        tasks.UpdateSitemapCacheTask().run()
         self.mock.VerifyAll()
 
 

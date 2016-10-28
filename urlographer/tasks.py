@@ -1,5 +1,4 @@
 
-from celery.decorators import task
 from celery.task import Task
 
 from django.db import transaction
@@ -9,11 +8,12 @@ from urlographer.models import URLMap
 from urlographer.views import sitemap
 
 
-@task(ignore_result=True)
-def update_sitemap_cache():
-    factory = RequestFactory()
-    request = factory.get('/sitemap.xml')
-    sitemap(request, invalidate_cache=True)
+class UpdateSitemapCacheTask(Task):
+
+    def run(self):
+        factory = RequestFactory()
+        request = factory.get('/sitemap.xml')
+        sitemap(request, invalidate_cache=True)
 
 
 class FixRedirectLoopsTask(Task):
