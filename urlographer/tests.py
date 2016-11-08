@@ -20,6 +20,12 @@ from collections import OrderedDict
 from model_mommy import mommy, recipe
 
 from django.conf import settings
+from django.contrib.admin.models import (
+    CHANGE,
+    LogEntry
+)
+from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest
@@ -879,6 +885,27 @@ class FixRedirectLoopsTaskTest(TestCase):
     def tearDown(self):
         self.mock.UnsetStubs()
 
+    def test_get_or_create_task_user_user_does_not_exist(self):
+        self.assertEqual(
+            User.objects.filter(username=self.task.user_username).count(), 0)
+
+        user = self.task.get_or_create_task_user()
+        self.assertEqual(user.username, self.task.user_username)
+
+        self.assertEqual(
+            User.objects.filter(username=self.task.user_username).count(), 1)
+
+    def test_get_or_create_task_user_user_exists(self):
+        mommy.make('auth.User', username=self.task.user_username)
+        self.assertEqual(
+            User.objects.filter(username=self.task.user_username).count(), 1)
+
+        user = self.task.get_or_create_task_user()
+        self.assertEqual(user.username, self.task.user_username)
+
+        self.assertEqual(
+            User.objects.filter(username=self.task.user_username).count(), 1)
+
     def test_get_urlmaps_2_hops(self):
         result = self.task.get_urlmaps_2_hops()
         self.assertQuerysetEqual(
@@ -888,6 +915,8 @@ class FixRedirectLoopsTaskTest(TestCase):
         )
 
     def test_run(self):
+        task_user = mommy.make('auth.User', username=self.task.user_username)
+
         self.assertEqual(self.urlD.redirect, self.urlC)
         self.mock.StubOutWithMock(self.task, 'get_urlmaps_2_hops')
 
@@ -903,6 +932,25 @@ class FixRedirectLoopsTaskTest(TestCase):
         self.assertEqual(updated_url_d.redirect, self.urlA)
         updated_url_g = models.URLMap.objects.get(pk=self.urlG.pk)
         self.assertEqual(updated_url_g.redirect, self.urlB)
+
+        # assert LogEntry entries have been created correctly
+        content_type_id = ContentType.objects.get_for_model(self.urlD).pk
+        url_d_logentry = LogEntry.objects.get(object_id=self.urlD.pk)
+        url_g_logentry = LogEntry.objects.get(object_id=self.urlG.pk)
+
+        self.assertEqual(url_d_logentry.user, task_user)
+        self.assertEqual(url_d_logentry.content_type_id, content_type_id)
+        self.assertEqual(url_d_logentry.action_flag, CHANGE)
+        self.assertEqual(
+            url_d_logentry.change_message,
+            'Updated to redirect directly to "/a/" by FixRedirectLoopsTask')
+
+        self.assertEqual(url_g_logentry.user, task_user)
+        self.assertEqual(url_g_logentry.content_type_id, content_type_id)
+        self.assertEqual(url_g_logentry.action_flag, CHANGE)
+        self.assertEqual(
+            url_g_logentry.change_message,
+            'Updated to redirect directly to "/b/" by FixRedirectLoopsTask')
 
 
 class HasRedirectsToItListFilterTest(TestCase):
