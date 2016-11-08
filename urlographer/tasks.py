@@ -61,6 +61,7 @@ class FixRedirectLoopsTask(Task):
             content_type_id = ContentType.objects.get_for_model(urlmap).pk
             with transaction.atomic():
                 urlmap.redirect = urlmap.redirect.redirect
+                urlmap.on_sitemap = False
                 urlmap.save()
                 change_message = (
                     'Updated to redirect directly to "{0}" by '

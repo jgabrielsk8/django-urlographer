@@ -930,8 +930,10 @@ class FixRedirectLoopsTaskTest(TestCase):
 
         updated_url_d = models.URLMap.objects.get(pk=self.urlD.pk)
         self.assertEqual(updated_url_d.redirect, self.urlA)
+        self.assertFalse(updated_url_d.on_sitemap)
         updated_url_g = models.URLMap.objects.get(pk=self.urlG.pk)
         self.assertEqual(updated_url_g.redirect, self.urlB)
+        self.assertFalse(updated_url_g.on_sitemap)
 
         # assert LogEntry entries have been created correctly
         content_type_id = ContentType.objects.get_for_model(self.urlD).pk
