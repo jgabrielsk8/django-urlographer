@@ -212,16 +212,6 @@ class URLMapTest(TestCase):
             u'Url map with this Hexdigest already exists.',
             self.url.save)
 
-    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'])
-    def test_save_index_refreshes_slash_cache(self):
-        urlmap = models.URLMap(
-            site=self.site, path='/test/index.html', status_code=204)
-        models.URLMapManager.cached_get(
-            self.site, '/test/', force_cache_invalidation=True)
-        self.mock.ReplayAll()
-        urlmap.save()
-        self.mock.VerifyAll()
-
 
 class URLMapManagerTest(TestCase):
     def setUp(self):
@@ -283,25 +273,6 @@ class URLMapManagerTest(TestCase):
             self.site, self.url.path, force_cache_invalidation=True)
         self.mock.VerifyAll()
         self.assertEqual(url, self.url)
-
-    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'],
-                       URLOGRAPHER_CACHE_PREFIX='urlographer')
-    def test_cached_get_index_alias_cache_hit(self):
-        index_urlmap = models.URLMap(site=self.site, path='/index.html',
-                                     status_code=204, hexdigest='index1234')
-        self.mock.StubOutWithMock(models.URLMap, 'set_hexdigest')
-        self.mock.StubOutWithMock(models.URLMap, 'cache_key')
-        self.mock.StubOutWithMock(models.cache, 'get')
-        models.URLMap.set_hexdigest()
-        models.URLMap.cache_key().AndReturn('urlographer:root1234')
-        models.cache.get('urlographer:root1234')
-        models.URLMap.set_hexdigest()
-        models.URLMap.cache_key().AndReturn('urlographer:index1234')
-        models.cache.get('urlographer:index1234').AndReturn(index_urlmap)
-        self.mock.ReplayAll()
-        urlmap = models.URLMap.objects.cached_get(self.site, '/')
-        self.mock.VerifyAll()
-        self.assertEqual(urlmap, index_urlmap)
 
 
 class RouteTest(TestCase):
