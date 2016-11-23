@@ -130,6 +130,16 @@ class URLMapTest(TestCase):
         self.assertEqual(
             self.url.hexdigest, self.hexdigest)
 
+    def test_cache_key(self):
+        self.url.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
+        self.assertEqual(self.url.cache_key(), self.cache_key)
+
+    def test_cache_key_with_hexdigest_unset(self):
+        with self.assertRaises(ValueError) as context:
+            self.url.cache_key()
+        self.assertEqual(
+            context.exception.message, 'URLMap has unset hexdigest')
+
     def test_save(self):
         self.site.save()
         self.url.site = self.site

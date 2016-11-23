@@ -154,7 +154,8 @@ class URLMap(TimeStampedModel):
         Must be called after the *hexdigest* has been set or an
         AssertionError will be raised
         """
-        assert self.hexdigest
+        if not self.hexdigest:
+            raise ValueError('URLMap has unset hexdigest')
         return settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
 
     def set_hexdigest(self):
