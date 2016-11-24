@@ -295,8 +295,8 @@ class RouteTest(TestCase):
         self.mock.UnsetStubs()
 
     def test_route_not_found(self):
-        request = self.factory.get('/404', follow=True)
-        self.assertEqual(request.path, '/404')
+        request = self.factory.get('/404/', follow=True)
+        self.assertEqual(request.path, '/404/')
         self.assertRaises(Http404, views.route, request)
 
     def test_route_gone(self):
@@ -308,8 +308,8 @@ class RouteTest(TestCase):
 
     def test_route_set_not_found(self):
         models.URLMap.objects.create(
-            site=self.site, status_code=404, path='/404', force_secure=False)
-        request = self.factory.get('/404')
+            site=self.site, status_code=404, path='/404/', force_secure=False)
+        request = self.factory.get('/404/')
         self.assertRaises(Http404, views.route, request)
 
     def test_route_redirect_canonical(self):
@@ -495,7 +495,8 @@ class RouteTest(TestCase):
 
     def test_append_slash_w_slash_no_match(self):
         response = self.client.get('/fake_page')
-        self.assertEqual(response.status_code, 404)
+        self.assertRedirects(response, '/fake_page/', status_code=301,
+                             fetch_redirect_response=False)
 
     @override_settings(
         URLOGRAPHER_HANDLERS={
@@ -529,11 +530,11 @@ class RouteTest(TestCase):
             404: {'test': 'this'}})
     def test_handler_as_dict_fails(self):
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=404, force_secure=False)
+            site=self.site, path='/page/', status_code=404, force_secure=False)
         self.assertRaisesMessage(
             ImproperlyConfigured,
             'URLOGRAPHER_HANDLERS values must be views or import strings',
-            views.route, self.factory.get('/page'))
+            views.route, self.factory.get('/page/'))
 
     # Newrelic Tests
     @override_settings(
@@ -1029,3 +1030,15 @@ class URLMapAdminTest(TestCase):
         urlmap = self.admin_instance.get_queryset(self.request)[0]
         self.assertEqual(
             self.admin_instance.redirects_count(urlmap), 0)
+
+
+class ShouldAppendSlashTest(TestCase):
+
+    def should_append_slash_yes(self):
+        self.assertTrue(utils.should_append_slash('/news/index'))
+        self.assertTrue(utils.should_append_slash('/news/indhtm'))
+
+    def should_append_slash_no(self):
+        self.assertFalse(utils.should_append_slash('/news/index/'))
+        self.assertFalse(utils.should_append_slash('/news/index.htm'))
+        self.assertFalse(utils.should_append_slash('/news/index.html'))
