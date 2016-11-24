@@ -1033,12 +1033,18 @@ class URLMapAdminTest(TestCase):
 
 
 class ShouldAppendSlashTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
 
-    def should_append_slash_yes(self):
-        self.assertTrue(utils.should_append_slash('/news/index'))
-        self.assertTrue(utils.should_append_slash('/news/indhtm'))
+    def build_request(self, path):
+        return self.factory.get(path)
 
-    def should_append_slash_no(self):
-        self.assertFalse(utils.should_append_slash('/news/index/'))
-        self.assertFalse(utils.should_append_slash('/news/index.htm'))
-        self.assertFalse(utils.should_append_slash('/news/index.html'))
+    def test_should_append_slash_yes(self):
+        for path in ['/news/index', '/news/indhtm']:
+            request = self.build_request(path)
+            self.assertTrue(utils.should_append_slash(request))
+
+    def test_should_append_slash_no(self):
+        for path in ['/news/index/', '/news/index.htm', 'news/index.html']:
+            request = self.build_request(path)
+            self.assertFalse(utils.should_append_slash(request))
