@@ -30,8 +30,6 @@ settings.URLOGRAPHER_CACHE_TIMEOUT = getattr(
     settings, 'URLOGRAPHER_CACHE_TIMEOUT', 0)
 settings.URLOGRAPHER_CACHE_PREFIX = getattr(
     settings, 'URLOGRAPHER_CACHE_PREFIX', 'urlographer:')
-settings.URLOGRAPHER_INDEX_ALIAS = getattr(
-    settings, 'URLOGRAPHER_INDEX_ALIAS', 'index.html')  # do NOT include /
 
 
 class ContentMap(TimeStampedModel):
@@ -93,16 +91,7 @@ class URLMapManager(models.Manager):
             if cached:
                 return cached
 
-        if path.endswith('/') and settings.URLOGRAPHER_INDEX_ALIAS:
-            try:
-                url = self.get(hexdigest=url.hexdigest)
-            except self.model.DoesNotExist:
-                url = self.cached_get(
-                    site, path + settings.URLOGRAPHER_INDEX_ALIAS,
-                    force_cache_invalidation=force_cache_invalidation)
-        else:
-            url = self.get(hexdigest=url.hexdigest)
-
+        url = self.get(hexdigest=url.hexdigest)
         # accessing foreignkeys caches instances with the object
         url.site
         url.content_map
@@ -165,7 +154,8 @@ class URLMap(TimeStampedModel):
         Must be called after the *hexdigest* has been set or an
         AssertionError will be raised
         """
-        assert self.hexdigest
+        if not self.hexdigest:
+            raise ValueError('URLMap has unset hexdigest')
         return settings.URLOGRAPHER_CACHE_PREFIX + self.hexdigest
 
     def set_hexdigest(self):
@@ -224,9 +214,5 @@ class URLMap(TimeStampedModel):
         self.site
         self.content_map
         self.redirect
-        cache.set(self.cache_key(), self,
-                  timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)
-        if self.path.endswith('/' + settings.URLOGRAPHER_INDEX_ALIAS):
-            self._default_manager.cached_get(
-                self.site, self.path[:-len(settings.URLOGRAPHER_INDEX_ALIAS)],
-                force_cache_invalidation=True)
+        cache.set(
+            self.cache_key(), self, timeout=settings.URLOGRAPHER_CACHE_TIMEOUT)

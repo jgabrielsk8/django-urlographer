@@ -41,6 +41,7 @@ from .utils import (
     force_cache_invalidation,
     get_redirect_url_with_query_string,
     get_view,
+    should_append_slash
 )
 
 settings.URLOGRAPHER_HANDLERS = getattr(settings, 'URLOGRAPHER_HANDLERS', {})
@@ -114,7 +115,10 @@ def route(request):
     elif url.status_code == 302:
         response = HttpResponseRedirect(unicode(url.redirect))
     elif url.status_code == 404:
-        response = HttpResponseNotFound()
+        if should_append_slash(request):
+            response = HttpResponsePermanentRedirect(request.path_info + '/')
+        else:
+            response = HttpResponseNotFound()
     else:
         response = HttpResponse(status=url.status_code)
 

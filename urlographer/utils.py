@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from django.conf import settings
 from django.core.urlresolvers import get_mod_func
 
 try:
@@ -97,3 +98,13 @@ def force_cache_invalidation(request):
     Returns true if a request from contains the Cache-Control: no-cache header
     '''
     return 'no-cache' in request.META.get('HTTP_CACHE_CONTROL', '')
+
+
+def should_append_slash(request):
+    """
+    :return: boolean determining whether the a trailing slash `/`
+             should be appended to the request path
+    """
+    no_redirect = ('/', '.htm', '.html')
+    return settings.APPEND_SLASH and not (
+        request.path_info.endswith(no_redirect))

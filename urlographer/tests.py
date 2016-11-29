@@ -130,6 +130,16 @@ class URLMapTest(TestCase):
         self.assertEqual(
             self.url.hexdigest, self.hexdigest)
 
+    def test_cache_key(self):
+        self.url.hexdigest = 'a6dd1406d4e5aadaafed9c2d285d36bd'
+        self.assertEqual(self.url.cache_key(), self.cache_key)
+
+    def test_cache_key_with_hexdigest_unset(self):
+        with self.assertRaises(ValueError) as context:
+            self.url.cache_key()
+        self.assertEqual(
+            context.exception.message, 'URLMap has unset hexdigest')
+
     def test_save(self):
         self.site.save()
         self.url.site = self.site
@@ -212,16 +222,6 @@ class URLMapTest(TestCase):
             u'Url map with this Hexdigest already exists.',
             self.url.save)
 
-    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'])
-    def test_save_index_refreshes_slash_cache(self):
-        urlmap = models.URLMap(
-            site=self.site, path='/test/index.html', status_code=204)
-        models.URLMapManager.cached_get(
-            self.site, '/test/', force_cache_invalidation=True)
-        self.mock.ReplayAll()
-        urlmap.save()
-        self.mock.VerifyAll()
-
 
 class URLMapManagerTest(TestCase):
     def setUp(self):
@@ -284,25 +284,6 @@ class URLMapManagerTest(TestCase):
         self.mock.VerifyAll()
         self.assertEqual(url, self.url)
 
-    @override_settings(URLOGRAPHER_INDEX_ALIASES=['index.html'],
-                       URLOGRAPHER_CACHE_PREFIX='urlographer')
-    def test_cached_get_index_alias_cache_hit(self):
-        index_urlmap = models.URLMap(site=self.site, path='/index.html',
-                                     status_code=204, hexdigest='index1234')
-        self.mock.StubOutWithMock(models.URLMap, 'set_hexdigest')
-        self.mock.StubOutWithMock(models.URLMap, 'cache_key')
-        self.mock.StubOutWithMock(models.cache, 'get')
-        models.URLMap.set_hexdigest()
-        models.URLMap.cache_key().AndReturn('urlographer:root1234')
-        models.cache.get('urlographer:root1234')
-        models.URLMap.set_hexdigest()
-        models.URLMap.cache_key().AndReturn('urlographer:index1234')
-        models.cache.get('urlographer:index1234').AndReturn(index_urlmap)
-        self.mock.ReplayAll()
-        urlmap = models.URLMap.objects.cached_get(self.site, '/')
-        self.mock.VerifyAll()
-        self.assertEqual(urlmap, index_urlmap)
-
 
 class RouteTest(TestCase):
     def setUp(self):
@@ -314,8 +295,8 @@ class RouteTest(TestCase):
         self.mock.UnsetStubs()
 
     def test_route_not_found(self):
-        request = self.factory.get('/404', follow=True)
-        self.assertEqual(request.path, '/404')
+        request = self.factory.get('/404/', follow=True)
+        self.assertEqual(request.path, '/404/')
         self.assertRaises(Http404, views.route, request)
 
     def test_route_gone(self):
@@ -327,8 +308,8 @@ class RouteTest(TestCase):
 
     def test_route_set_not_found(self):
         models.URLMap.objects.create(
-            site=self.site, status_code=404, path='/404', force_secure=False)
-        request = self.factory.get('/404')
+            site=self.site, status_code=404, path='/404/', force_secure=False)
+        request = self.factory.get('/404/')
         self.assertRaises(Http404, views.route, request)
 
     def test_route_redirect_canonical(self):
@@ -514,7 +495,8 @@ class RouteTest(TestCase):
 
     def test_append_slash_w_slash_no_match(self):
         response = self.client.get('/fake_page')
-        self.assertEqual(response.status_code, 404)
+        self.assertRedirects(response, '/fake_page/', status_code=301,
+                             fetch_redirect_response=False)
 
     @override_settings(
         URLOGRAPHER_HANDLERS={
@@ -548,11 +530,11 @@ class RouteTest(TestCase):
             404: {'test': 'this'}})
     def test_handler_as_dict_fails(self):
         models.URLMap.objects.create(
-            site=self.site, path='/page', status_code=404, force_secure=False)
+            site=self.site, path='/page/', status_code=404, force_secure=False)
         self.assertRaisesMessage(
             ImproperlyConfigured,
             'URLOGRAPHER_HANDLERS values must be views or import strings',
-            views.route, self.factory.get('/page'))
+            views.route, self.factory.get('/page/'))
 
     # Newrelic Tests
     @override_settings(
@@ -1048,3 +1030,21 @@ class URLMapAdminTest(TestCase):
         urlmap = self.admin_instance.get_queryset(self.request)[0]
         self.assertEqual(
             self.admin_instance.redirects_count(urlmap), 0)
+
+
+class ShouldAppendSlashTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def build_request(self, path):
+        return self.factory.get(path)
+
+    def test_should_append_slash_yes(self):
+        for path in ['/news/index', '/news/indhtm']:
+            request = self.build_request(path)
+            self.assertTrue(utils.should_append_slash(request))
+
+    def test_should_append_slash_no(self):
+        for path in ['/news/index/', '/news/index.htm', 'news/index.html']:
+            request = self.build_request(path)
+            self.assertFalse(utils.should_append_slash(request))

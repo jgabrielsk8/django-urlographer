@@ -31,7 +31,7 @@ tox
 
 To run tests for a specific environment:
 ```
-tox -e django16
+tox -e django19
 ```
 
 
@@ -49,7 +49,14 @@ deps =
 
 Run this command:
 ```
-tox -e django16 -- -s
+tox -e django19 -- -s
+```
+
+To run coverage locally
+--
+
+```
+coverage report -m
 ```
 
 
