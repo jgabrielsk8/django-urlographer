@@ -77,7 +77,7 @@ class URLMapAdmin(admin.ModelAdmin):
         'on_sitemap',
         ('created', admin.DateFieldListFilter),
         HasRedirectsToItListFilter)
-    raw_id_fields = ('redirect', 'content_map')
+    raw_id_fields = ('canonical', 'redirect', 'content_map')
     readonly_fields = ('hexdigest',)
     search_fields = ('path',)
 
