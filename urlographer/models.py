@@ -123,8 +123,7 @@ class URLMap(TimeStampedModel):
     hexdigest = models.CharField(max_length=255, db_index=True, blank=True,
                                  unique=True)
     status_code = models.IntegerField(default=200, db_index=True)
-    canonical = models.ForeignKey(
-        'self', related_name='canonical_childs', blank=True, null=True)
+    canonical = models.ForeignKey('self', blank=True, null=True)
     redirect = models.ForeignKey(
         'self', related_name='redirects', blank=True, null=True)
     content_map = models.ForeignKey(ContentMap, blank=True, null=True)
