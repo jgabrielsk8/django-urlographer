@@ -32,6 +32,7 @@ except ImportError:
 
 try:
     import newrelic
+    import newrelic.agent
 except:
     newrelic = False
 
