@@ -223,6 +223,67 @@ class URLMapTest(TestCase):
             u'Url map with this Hexdigest already exists.',
             self.url.save)
 
+    def test_get_amp_equivalent_when_it_does_not_exist(self):
+        self.assertIsNone(self.url.get_amp_equivalent())
+
+    def test_get_amp_equivalent_when_it_does_exist(self):
+        amp_url = mommy.make(
+            'urlographer.URLMap', path='/amp/test_path', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        self.assertEqual(self.url.get_amp_equivalent(), amp_url)
+
+    def test_update_as_main_urlmap_301_302(self):
+        redirect_to = mommy.make(
+            'urlographer.URLMap', path='/test/redirect-target/',
+            status_code=200,
+            content_map__view='django.views.generic.base.View')
+        main_url = mommy.make(
+            'urlographer.URLMap', path='/test/', status_code=301,
+            redirect=redirect_to)
+        amp_url = mommy.make(
+            'urlographer.URLMap', path='/amp/test/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        user = mommy.make('auth.User')
+
+        amp_url.update_as_main_urlmap(user, main_url)
+
+        self.assertEqual(amp_url.status_code, main_url.status_code)
+        self.assertEqual(amp_url.redirect, main_url.redirect)
+        self.assertEqual(amp_url.on_sitemap, main_url.on_sitemap)
+
+        content_type_id = ContentType.objects.get_for_model(amp_url).pk
+        logentry = LogEntry.objects.get(object_id=amp_url.id)
+        self.assertEqual(logentry.user, user)
+        self.assertEqual(logentry.content_type_id, content_type_id)
+        self.assertEqual(logentry.action_flag, CHANGE)
+        self.assertEqual(
+            logentry.change_message,
+            'Updated to reflect main URLMap "/test/" changed to new status '
+            'code "301".')
+
+    def test_update_as_main_urlmap_410(self):
+        main_url = mommy.make(
+            'urlographer.URLMap', path='/test/', status_code=410)
+        amp_url = mommy.make(
+            'urlographer.URLMap', path='/amp/test/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        user = mommy.make('auth.User')
+
+        amp_url.update_as_main_urlmap(user, main_url)
+
+        self.assertEqual(amp_url.status_code, main_url.status_code)
+        self.assertEqual(amp_url.on_sitemap, main_url.on_sitemap)
+
+        content_type_id = ContentType.objects.get_for_model(amp_url).pk
+        logentry = LogEntry.objects.get(object_id=amp_url.id)
+        self.assertEqual(logentry.user, user)
+        self.assertEqual(logentry.content_type_id, content_type_id)
+        self.assertEqual(logentry.action_flag, CHANGE)
+        self.assertEqual(
+            logentry.change_message,
+            'Updated to reflect main URLMap "/test/" changed to new status '
+            'code "410".')
+
 
 class URLMapManagerTest(TestCase):
     def setUp(self):
