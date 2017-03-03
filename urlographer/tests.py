@@ -20,6 +20,7 @@ from collections import OrderedDict
 from model_mommy import mommy, recipe
 
 from django.conf import settings
+from django.contrib.admin import site as admin_site
 from django.contrib.admin.models import (
     CHANGE,
     LogEntry
@@ -1007,7 +1008,7 @@ class URLMapAdminTest(TestCase):
         self.urlmap = models.URLMap.objects.create(
             site=Site.objects.get(id=1), path='/test_path',
             content_map=content_map)
-        self.admin_instance = admin.URLMapAdmin(models.URLMap, None)
+        self.admin_instance = admin.URLMapAdmin(models.URLMap, admin_site)
         self.request = RequestFactory().get('')
 
     def test_get_queryset_without_redirects(self):
@@ -1030,6 +1031,144 @@ class URLMapAdminTest(TestCase):
         urlmap = self.admin_instance.get_queryset(self.request)[0]
         self.assertEqual(
             self.admin_instance.redirects_count(urlmap), 0)
+
+    def test_get_form_sets_user(self):
+        self.request.user = mommy.make('auth.User')
+        form = self.admin_instance.get_form(self.request, obj=self.urlmap)
+        self.assertEqual(form.current_user, self.request.user)
+
+
+class URLMapAdminFormTest(TestCase):
+
+    def setUp(self):
+        self.content_map = models.ContentMap.objects.create(
+            view='urlographer.views.route')
+        self.urlmap_recipe = recipe.Recipe(
+            'urlographer.URLMap', site=Site.objects.get(id=1),
+            path='/test/', content_map=self.content_map)
+        self.admin_instance = admin.URLMapAdmin(models.URLMap, admin_site)
+        self.post_data = {}
+        self.request = RequestFactory().post('')
+        self.request.user = mommy.make('auth.User')
+        self.mock = mox.Mox()
+
+    def tearDown(self):
+        self.mock.UnsetStubs()
+
+    @property
+    def sample_form_data(self):
+        return {
+            'site': Site.objects.get(id=1).id,
+            'path': '/test/',
+            'force_secure': True,
+            'status_code': 999,  # modify this on saved_obj instance
+            'canonical': None,
+            'redirect': None,
+            'content_map': self.content_map.id,
+            'on_sitemap': False,
+        }
+
+    def test_save_urlmap_new_status_code_no_impact_on_amp_urlmap(self):
+        urlmap = self.urlmap_recipe.make(
+            status_code=200,
+            content_map__view='django.views.generic.base.View')
+
+        saved_obj = self.mock.CreateMockAnything()
+        saved_obj.status_code = 200
+        self.mock.StubOutWithMock(admin.forms.ModelForm, 'save')
+        self.mock.StubOutWithMock(saved_obj, 'get_amp_equivalent')
+
+        # Expected calls:
+        admin.forms.ModelForm.save(True).AndReturn(saved_obj)
+
+        form = admin.URLMapAdminForm(self.sample_form_data, instance=urlmap)
+
+        self.mock.ReplayAll()
+        instance = form.save()
+        self.mock.VerifyAll()
+
+        self.assertEqual(instance, saved_obj)
+
+    def test_save_urlmap_new_status_code_impacts_but_no_amp_urlmap(self):
+        redirect_to = self.urlmap_recipe.make(
+            path='/test/redirect-target/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        urlmap = self.urlmap_recipe.make(
+            status_code=301, redirect=redirect_to)
+
+        saved_obj = self.mock.CreateMockAnything()
+        saved_obj.status_code = 301
+        self.mock.StubOutWithMock(admin.forms.ModelForm, 'save')
+        self.mock.StubOutWithMock(saved_obj, 'get_amp_equivalent')
+
+        # Expected calls:
+        admin.forms.ModelForm.save(True).AndReturn(saved_obj)
+        saved_obj.get_amp_equivalent().AndReturn(None)
+
+        form = admin.URLMapAdminForm(self.sample_form_data, instance=urlmap)
+
+        self.mock.ReplayAll()
+        instance = form.save()
+        self.mock.VerifyAll()
+
+        self.assertEqual(instance, saved_obj)
+
+    def test_save_urlmap_new_status_code_impacts_but_ampurl_already_301(self):
+        redirect_to = self.urlmap_recipe.make(
+            path='/test/redirect-target/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        urlmap = self.urlmap_recipe.make(
+            status_code=301, redirect=redirect_to)
+        amp_urlmap = self.urlmap_recipe.make(
+            path='/amp/test/', status_code=301, redirect=redirect_to)
+
+        saved_obj = self.mock.CreateMockAnything()
+        saved_obj.status_code = 301
+        self.mock.StubOutWithMock(admin.forms.ModelForm, 'save')
+        self.mock.StubOutWithMock(saved_obj, 'get_amp_equivalent')
+        self.mock.StubOutWithMock(amp_urlmap, 'update_as_main_urlmap')
+
+        # Expected calls:
+        admin.forms.ModelForm.save(True).AndReturn(saved_obj)
+        saved_obj.get_amp_equivalent().AndReturn(amp_urlmap)
+
+        form = admin.URLMapAdminForm(self.sample_form_data, instance=urlmap)
+
+        self.mock.ReplayAll()
+        instance = form.save()
+        self.mock.VerifyAll()
+
+        self.assertEqual(instance, saved_obj)
+
+    def test_save_urlmap_new_status_code_should_update_amp_urlmap(self):
+        redirect_to = self.urlmap_recipe.make(
+            path='/test/redirect-target/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+        urlmap = self.urlmap_recipe.make(
+            status_code=301, redirect=redirect_to)
+        amp_urlmap = self.urlmap_recipe.make(
+            path='/amp/test/', status_code=200,
+            content_map__view='django.views.generic.base.View')
+
+        saved_obj = self.mock.CreateMockAnything()
+        saved_obj.status_code = 301
+        self.mock.StubOutWithMock(admin.forms.ModelForm, 'save')
+        self.mock.StubOutWithMock(saved_obj, 'get_amp_equivalent')
+        self.mock.StubOutWithMock(amp_urlmap, 'update_as_main_urlmap')
+
+        # Expected calls:
+        admin.forms.ModelForm.save(True).AndReturn(saved_obj)
+        saved_obj.get_amp_equivalent().AndReturn(amp_urlmap)
+        amp_urlmap.update_as_main_urlmap(self.request.user, saved_obj)
+
+        form = admin.URLMapAdminForm(self.sample_form_data, instance=urlmap)
+        form.current_user = self.request.user
+
+        self.mock.ReplayAll()
+        instance = form.save()
+        self.mock.VerifyAll()
+
+        self.assertEqual(instance, saved_obj)
 
 
 class ShouldAppendSlashTest(TestCase):
