@@ -5,3 +5,4 @@ model-mommy==1.2.6
 nose
 django-nose
 south
+tox==2.6.0
