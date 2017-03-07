@@ -29,7 +29,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404, HttpRequest
+from django.http import Http404
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 
@@ -873,21 +873,6 @@ class SitemapTest(TestCase):
         self.mock.VerifyAll()
         self.assertEqual(
             response.content, self.mock_contrib_sitemap_response.content)
-
-
-class UpdateSitemapCacheTaskTest(TestCase):
-    def setUp(self):
-        self.mock = mox.Mox()
-
-    def tearDown(self):
-        self.mock.UnsetStubs()
-
-    def test_update_sitemap_cache(self):
-        self.mock.StubOutWithMock(tasks, 'sitemap')
-        tasks.sitemap(mox.IsA(HttpRequest), invalidate_cache=True)
-        self.mock.ReplayAll()
-        tasks.UpdateSitemapCacheTask().run()
-        self.mock.VerifyAll()
 
 
 class FixRedirectLoopsTaskTest(TestCase):
