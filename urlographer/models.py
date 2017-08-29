@@ -181,7 +181,7 @@ class URLMap(TimeStampedModel):
         """
         try:
             super(URLMap, self).clean_fields(*args, **kwargs)
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.message_dict
         else:
             errors = {}
