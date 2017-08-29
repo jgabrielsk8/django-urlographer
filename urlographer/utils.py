@@ -14,6 +14,7 @@
 
 from django.conf import settings
 from django.core.urlresolvers import get_mod_func
+from django.http import Http404
 
 try:
     # Django versions >= 1.9
@@ -80,8 +81,11 @@ def get_view(lookup_view):
     lookup_view = lookup_view.encode('ascii')
     mod_name, func_or_class_name = get_mod_func(lookup_view)
     assert func_or_class_name != ''
-    view = getattr(import_module(mod_name), func_or_class_name)
-    assert callable(view) or hasattr(view, 'as_view')
+    try:
+        view = getattr(import_module(mod_name), func_or_class_name)
+        assert callable(view) or hasattr(view, 'as_view')
+    except:
+        raise Http404
     return view
 get_view = memoize(get_view, _view_cache, 1)
 

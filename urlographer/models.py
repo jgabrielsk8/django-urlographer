@@ -54,15 +54,15 @@ class ContentMap(TimeStampedModel):
     def __unicode__(self):
         return '%s(**%r)' % (self.view, self.options)
 
-    def clean(self):
-        """
-        Ensures that we have a valid view according to
-        :func:`~urlographer.utils.get_view`.
-        """
-        try:
-            get_view(self.view)
-        except:
-            raise ValidationError({'view': ['Please enter a valid view.']})
+    # def clean(self):
+    #     """
+    #     Ensures that we have a valid view according to
+    #     :func:`~urlographer.utils.get_view`.
+    #     """
+    #     try:
+    #         get_view(self.view)
+    #     except:
+    #         raise ValidationError({'view': ['Please enter a valid view.']})
 
     def save(self, *args, **options):
         """
